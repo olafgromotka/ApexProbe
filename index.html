@@ -105,7 +105,7 @@
         <div class="flex items-center justify-between w-full md:w-auto py-2 md:py-0">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl tracking-tighter text-white brand-logo uppercase">APEX<span class="text-rose-600">PROBE</span></h1>
-                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.3.4</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.3.5</span>
             </div>
             <button class="md:hidden text-slate-500 hover:text-white text-sm"><i class="fas fa-cog"></i></button>
         </div>
@@ -147,7 +147,7 @@
 
             <!-- TAB 1: VIRTUAL WIPS -->
             <div id="panel-wips" class="tab-content space-y-6">
-                <!-- Heights Manager -->
+                <!-- Heights Manager for WIPS -->
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
                         <i class="fas fa-arrows-up-down"></i> Heights Manager
@@ -212,6 +212,7 @@
                     </div>
                 </div>
 
+                <!-- Post Processing Panel (WIPS) -->
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
                         <i class="fas fa-file-export"></i> Post Processing
@@ -263,6 +264,7 @@
                     </div>
                 </div>
 
+                <!-- Post Processing Panel (Measure) -->
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
                         <i class="fas fa-file-export"></i> Post Processing
@@ -303,6 +305,30 @@
 
             <!-- TAB 3: FLATNESS -->
             <div id="panel-flatness" class="tab-content hidden space-y-6">
+                <!-- Heights Manager for Flatness -->
+                <div class="panel p-4">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                        <i class="fas fa-arrows-up-down"></i> Heights Manager
+                    </h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Clearance</label>
+                            <input type="text" id="flat-z-clr" value="1.0" class="rounded px-2 py-2 text-xs text-center font-bold"
+                                   data-help="Height for initial entry and final retract.">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Protected</label>
+                            <input type="text" id="flat-z-prot" value="0.5" class="rounded px-2 py-2 text-xs text-center font-bold"
+                                   data-help="Height used for XY rapid moves between probing points.">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Plane</label>
+                            <input type="text" id="flat-z-plane" value="0.1" class="rounded px-2 py-2 text-xs text-center font-bold"
+                                   data-help="Height above part surface the probe will feed to via protected move from protected height.">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest">Flatness Logic</h3>
                     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -331,6 +357,7 @@
                     </div>
                 </div>
 
+                <!-- Post Processing Panel (Flatness) -->
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
                         <i class="fas fa-file-export"></i> Post Processing
@@ -575,7 +602,7 @@
                 const isExt = document.getElementById('global-ext').checked;
                 const zClr = engine.fDec(document.getElementById('measure-z-clr').value);
                 const zProt = engine.fDec(document.getElementById('measure-z-prot').value);
-                const { g: gWcs, w: wStr } = engine.formatWcs(wcs, isExt);
+                const { g: gWcs, w: globalWStr } = engine.formatWcs(wcs, isExt);
                 
                 let lines = ["(MULTI-FEATURE SEQUENCE)", "G103 P1 (LIMIT LOOK-AHEAD)", "(RESET MACROS)"];
                 const rows = document.querySelectorAll('.feature-row');
@@ -588,6 +615,8 @@
                     const plane = engine.fDec(r.querySelector('.feat-plane').value);
                     const tol = r.querySelector('.feat-tol').value.trim();
                     const comment = r.querySelector('.feat-comment').value.toUpperCase() || `FEAT ${i+1}`;
+                    const destWcs = r.querySelector('.feat-dest-wcs').value.trim();
+                    const destIsExt = r.querySelector('.feat-dest-ext').checked;
                     
                     const vals = {
                         d: r.querySelector('.feat-d').value,
@@ -596,16 +625,21 @@
                         i: r.querySelector('.feat-i').value,
                         j: r.querySelector('.feat-j').value
                     };
+
+                    let rowWStr = globalWStr;
+                    if (destWcs) {
+                        const { w } = engine.formatWcs(destWcs, destIsExt);
+                        rowWStr = w;
+                    }
                     
                     lines.push("", `N${(tNum*100)+i+1} (${comment})`);
                     lines.push(`G00 X${engine.fDec(r.querySelector('.feat-x').value)} Y${engine.fDec(r.querySelector('.feat-y').value)}`);
                     lines.push(`G00 Z${zProt}`);
                     lines.push(`${engine.PROBE_PROTECT} Z${plane} F50.`);
-                    lines.push(engine.getCycleString(key, vals, wStr));
+                    lines.push(engine.getCycleString(key, vals, rowWStr));
                     
                     if(macro) {
                         lines.push(`#${macro} = #188 (STORE MEASURED)`);
-                        // Implementation of the branch logic specifically for size cycles A10-A17
                         if(tol && !key.startsWith("A20")) {
                             let nominal = engine.fDec(vals.d); 
                             lines.push(`(--- ${comment} EVALUATION ---)`);
@@ -622,55 +656,60 @@
                 const mCode = document.querySelector('input[name="measure-m-code"]:checked').value;
                 lines = engine.applyWrapper(lines, isWrapped, pgmNum, mCode);
                 ui.setOutput(lines.join("\n"));
+                if(window.innerWidth < 768) document.getElementById('right-terminal').scrollIntoView({ behavior: 'smooth' });
             },
 
             generateFlatness: () => {
                 const tNum = document.getElementById('global-tool').value;
-                const wcs = document.getElementById('global-wcs').value;
+                const wcsVal = document.getElementById('global-wcs').value;
                 const isExt = document.getElementById('global-ext').checked;
-                const sacWcs = document.getElementById('flat-sac-wcs').value;
+                const sacWcsVal = document.getElementById('flat-sac-wcs').value;
                 const tolVal = document.getElementById('flat-tol').value;
                 const tolMac = document.getElementById('flat-mac-tol').value;
                 const minMac = document.getElementById('flat-mac-min').value;
                 const maxMac = document.getElementById('flat-mac-max').value;
-
-                const { g: gWcs } = engine.formatWcs(wcs, isExt);
-                const { w: wSac } = engine.formatWcs(sacWcs, true);
+                const zClr = engine.fDec(document.getElementById('flat-z-clr').value);
+                const zProt = engine.fDec(document.getElementById('flat-z-prot').value);
+                const zPlane = engine.fDec(document.getElementById('flat-z-plane').value);
+                const { g: gWcs } = engine.formatWcs(wcsVal, isExt);
+                const { w: wSac } = engine.formatWcs(sacWcsVal, true);
                 let lines = ["(--- FLATNESS ROUTINE ---)", `(SACRIFICIAL ${wSac})`, "G103 P1", "(INIT VARS)"];
                 const points = document.querySelectorAll('.flat-point');
                 const ptMacros = [];
-                
                 points.forEach(p => {
-                    const m = p.querySelector('.flat-pt-m').value;
+                    const m = p.querySelector('.flat-pt-m').value.replace('#','');
                     ptMacros.push(m);
                     lines.push(`#${m}=0.`);
                 });
-
                 lines.push(`#${minMac}=0.`, `#${maxMac}=0.`, `#${tolMac}=${engine.fDec(tolVal)}`);
-                lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G90 ${gWcs}`, `G43 H${tNum} Z1.0`, engine.PROBE_ON, "");
-                
+                lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, "");
                 points.forEach((p, i) => {
-                    lines.push(`(PT ${i+1})`, `${engine.PROBE_PROTECT} X${engine.fDec(p.querySelector('.flat-pt-x').value)} Y${engine.fDec(p.querySelector('.flat-pt-y').value)} Z0.5`, `${engine.WIPS_STORM} A20. H-1.0 ${wSac}`, `#${ptMacros[i]}=#5063`, "");
+                    const x = engine.fDec(p.querySelector('.flat-pt-x').value);
+                    const y = engine.fDec(p.querySelector('.flat-pt-y').value);
+                    lines.push(`(PT ${i+1})`);
+                    lines.push(`G00 G90 ${gWcs} X${x} Y${y} (RAPID TO PT${i+1})`);
+                    lines.push(`G43 H${tNum} Z${zClr} (RAPID TO CLEARANCE HEIGHT)`);
+                    lines.push(`${engine.PROBE_ON} (TURN ON PROBE)`);
+                    lines.push(`${engine.PROBE_PROTECT} Z${zPlane} (PROTECTED FEED TO PROBING PLANE)`);
+                    lines.push(`${engine.WIPS_STORM} A20. H-1.0 ${wSac}`);
+                    lines.push(`#${ptMacros[i]}=#5063`);
+                    lines.push(`G00 Z${zProt} (RAPID TO PROTECTED HEIGHT)`);
+                    lines.push("");
                 });
-
-                // Implementation of the Flatness evaluation logic
                 if (ptMacros.length > 0) {
                     lines.push("(--- EVALUATE RESULTS ---)");
                     lines.push(`#${minMac} = #${ptMacros[0]} (INITIAL MIN)`);
                     lines.push(`#${maxMac} = #${ptMacros[0]} (INITIAL MAX)`);
-                    
                     for (let k = 1; k < ptMacros.length; k++) {
                         lines.push(`(CHECK PT ${k+1})`);
                         lines.push(`IF [ #${ptMacros[k]} LT #${minMac} ] #${minMac} = #${ptMacros[k]}`);
                         lines.push(`IF [ #${ptMacros[k]} GT #${maxMac} ] #${maxMac} = #${ptMacros[k]}`);
                     }
-                    
                     lines.push("", "(--- FINAL RANGE CHECK ---)");
                     lines.push(`#100 = ABS[ #${maxMac} - #${minMac} ] (TOTAL DEVIATION)`);
                     lines.push(`IF [ #100 GT #${tolMac} ] #3000 = 1 (FLATNESS OUT OF TOL)`);
                 }
-
-                lines.push(engine.PROBE_OFF, engine.G_HOME_Z);
+                lines.push(engine.PROBE_OFF, engine.G_HOME_Z, engine.G_SAFE_XY, "M01");
                 const isWrapped = document.getElementById('flatness-post-wrap').checked;
                 const pgmNum = document.getElementById('flatness-pgm-num').value || '1234';
                 const mCode = document.querySelector('input[name="flatness-m-code"]:checked').value;
@@ -685,15 +724,12 @@
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.add('text-slate-400'));
                 const activeBtn = document.getElementById('tab-' + tabId);
                 if (activeBtn) activeBtn.classList.add('tab-active', 'text-white');
-                
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
                 const activePanel = document.getElementById('panel-' + tabId);
                 if (activePanel) activePanel.classList.remove('hidden');
-                
                 const terminal = document.getElementById('right-terminal');
                 const sidebar = document.getElementById('left-sidebar');
                 const machinePanel = document.getElementById('machine-setup-panel');
-
                 if (tabId === 'macro') {
                     terminal.classList.add('hidden');
                     machinePanel.classList.add('hidden');
@@ -725,13 +761,8 @@
                 const update = (labId, contId, name) => {
                     const lab = document.getElementById(labId);
                     const cont = document.getElementById(contId);
-                    if (name) {
-                        lab.textContent = name;
-                        cont.classList.remove('arg-inactive');
-                    } else {
-                        lab.textContent = "-";
-                        cont.classList.add('arg-inactive');
-                    }
+                    if (name) { lab.textContent = name; cont.classList.remove('arg-inactive'); } 
+                    else { lab.textContent = "-"; cont.classList.add('arg-inactive'); }
                 };
                 update('wips-lab-d', 'wips-arg-d-cont', map.d);
                 update('wips-lab-e', 'wips-arg-e-cont', map.e);
@@ -747,13 +778,8 @@
                 const update = (cls, name) => {
                     const lab = row.querySelector(`.lab-${cls}`);
                     const cont = row.querySelector(`.arg-${cls}`);
-                    if (name) {
-                        lab.textContent = name;
-                        cont.classList.remove('arg-inactive');
-                    } else {
-                        lab.textContent = "-";
-                        cont.classList.add('arg-inactive');
-                    }
+                    if (name) { lab.textContent = name; cont.classList.remove('arg-inactive'); } 
+                    else { lab.textContent = "-"; cont.classList.add('arg-inactive'); }
                 };
                 update('d', map.d); update('e', map.e); update('h', map.h); update('i', map.i); update('j', map.j);
             },
@@ -785,8 +811,8 @@
                     tbody.innerHTML += `
                         <tr class="hover:bg-slate-900/40 transition text-xs sm:text-sm">
                             <td class="py-3 px-4 font-black text-slate-500 border-r border-slate-800">${ax}</td>
-                            <td class="py-3 px-4 text-blue-400 font-black">${bank7}</td>
-                            <td class="py-3 px-4 text-rose-400 font-black">${bank14}</td>
+                            <td class="py-3 px-4 text-blue-400 font-bold">${bank7}</td>
+                            <td class="py-3 px-4 text-rose-400 font-bold">${bank14}</td>
                         </tr>`;
                 });
             },
@@ -813,7 +839,7 @@
                         <span class="text-[9px] font-bold text-slate-600 uppercase">FEAT #${id}</span>
                         <button onclick="this.parentElement.parentElement.remove()" class="text-slate-700 hover:text-rose-500"><i class="fas fa-trash text-[9px]"></i></button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div class="grid grid-cols-3 gap-2 mb-3">
                         <div class="flex flex-col">
                             <label class="arg-label">Cycle Type</label>
                             <select class="feat-cycle w-full rounded px-2 py-1 text-xs font-bold" onchange="ui.updateRowLabels(this.closest('.feature-row'))">
@@ -824,6 +850,15 @@
                                 <option value="A15">A15 - Pocket X</option>
                                 <option value="A20Z">A20 - Surface Z</option>
                             </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="arg-label">Dest WCS</label>
+                            <div class="flex gap-1">
+                                <input type="text" class="feat-dest-wcs w-full rounded px-2 py-1 text-xs font-bold" placeholder="54">
+                                <div class="flex items-center bg-slate-800 px-1 rounded border border-slate-700">
+                                    <input type="checkbox" class="feat-dest-ext accent-rose-600 scale-75">
+                                </div>
+                            </div>
                         </div>
                         <div class="flex flex-col">
                             <label class="arg-label">Comment</label>
