@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ApexProbe | Haas Automation Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --haas-red: #e11d48;
+            --cnc-dark: #020617;
+            --panel-bg: #0f172a;
+        }
+        /* Applied Helvetica font stack globally */
+        body { 
+            background-color: var(--cnc-dark); 
+            color: #e2e8f0; 
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; 
+        }
+        @media (min-width: 768px) {
+            body { overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--haas-red); }
+
+        .tab-btn { 
+            transition: all 0.2s; 
+            border-bottom: 3px solid transparent; 
+            white-space: nowrap; 
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+        .tab-active { border-bottom: 3px solid var(--haas-red); color: white; background: rgba(225, 29, 72, 0.1); }
+        
+        .gcode-terminal { 
+            background: #000; 
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            border-left: 4px solid var(--haas-red);
+        }
+
+        .panel { background: var(--panel-bg); border: 1px solid #1e293b; border-radius: 4px; }
+        
+        input, select { 
+            background: #020617 !important; 
+            border: 1px solid #334155 !important;
+            color: #f1f5f9;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 15px !important; 
+        }
+        input:focus { border-color: var(--haas-red) !important; outline: none; box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2); }
+        
+        .feature-row { border-left: 3px solid #334155; transition: border-color 0.2s; }
+        .feature-row:hover { border-left-color: var(--haas-red); }
+
+        .btn-primary { 
+            background: var(--haas-red); 
+            transition: all 0.2s; 
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .btn-primary:hover { background: #be123c; transform: translateY(-1px); }
+        
+        #nav-tabs { -webkit-overflow-scrolling: touch; }
+
+        /* Floating Help Box Styles */
+        #help-box {
+            position: fixed;
+            z-index: 10000;
+            pointer-events: none;
+            max-width: 300px;
+            background: #0f172a;
+            border: 1px solid var(--haas-red);
+            border-left-width: 4px;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.7);
+            opacity: 0;
+            display: none;
+            transition: opacity 0.2s;
+        }
+        #help-box.visible {
+            opacity: 1;
+        }
+        #help-text {
+            white-space: pre-line;
+            font-size: 0.75rem;
+            line-height: 1.4;
+        }
+        .brand-logo {
+            font-weight: 900;
+            letter-spacing: -0.02em;
+        }
+    </style>
+</head>
+<body class="flex flex-col">
+
+    <!-- Help Box Element -->
+    <div id="help-box" class="p-4 rounded shadow-2xl">
+        <h4 class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+            <i class="fas fa-info-circle"></i> Parameter Reference
+        </h4>
+        <p id="help-text" class="text-slate-300"></p>
+    </div>
+
+    <header class="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-1 flex flex-col md:flex-row justify-between items-center shrink-0 gap-2">
+        <div class="flex items-center justify-between w-full md:w-auto py-2 md:py-0">
+            <div class="flex items-center gap-4">
+                <h1 class="text-xl tracking-tighter text-white brand-logo uppercase">APEX<span class="text-rose-600">PROBE</span></h1>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.3.1</span>
+            </div>
+            <button class="md:hidden text-slate-500 hover:text-white text-sm"><i class="fas fa-cog"></i></button>
+        </div>
+        <nav class="flex h-12 overflow-x-auto w-full md:w-auto no-scrollbar" id="nav-tabs">
+            <button onclick="ui.switchTab('wips')" id="tab-wips" class="tab-btn px-4 md:px-6 text-xs tab-active">VIRTUAL WIPS</button>
+            <button onclick="ui.switchTab('measure')" id="tab-measure" class="tab-btn px-4 md:px-6 text-xs text-slate-400 hover:text-white">MEASURE FEATURES</button>
+            <button onclick="ui.switchTab('flatness')" id="tab-flatness" class="tab-btn px-4 md:px-6 text-xs text-slate-400 hover:text-white">FLATNESS</button>
+            <button onclick="ui.switchTab('macro')" id="tab-macro" class="tab-btn px-4 md:px-6 text-xs text-slate-400 hover:text-white">MACRO REF</button>
+        </nav>
+        <div class="hidden md:flex gap-4"><button class="text-slate-500 hover:text-white text-sm"><i class="fas fa-cog"></i></button></div>
+    </header>
+
+    <main class="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
+        <!-- LEFT COLUMN: INPUTS -->
+        <section id="left-sidebar" class="w-full md:w-[450px] p-4 md:p-6 overflow-y-auto border-b md:border-b-0 md:border-r border-slate-800 shrink-0 space-y-6 bg-slate-900/40 transition-all duration-300">
+            
+            <!-- MACHINE SETUP PANEL -->
+            <div id="machine-setup-panel" class="panel p-4">
+                <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                    <i class="fas fa-microchip"></i> Machine Setup
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Probe Tool #</label>
+                        <input type="number" id="global-tool" value="50" class="w-full rounded px-3 py-2 text-sm font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Active WCS</label>
+                        <div class="flex gap-1">
+                            <input type="text" id="global-wcs" value="54" class="w-full rounded px-3 py-2 text-sm font-bold">
+                            <div class="flex items-center bg-slate-800 px-2 rounded border border-slate-700">
+                                <input type="checkbox" id="global-ext" class="accent-rose-600">
+                                <label for="global-ext" class="text-[10px] ml-1 text-slate-400 font-bold uppercase">EXT</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 1: VIRTUAL WIPS -->
+            <div id="panel-wips" class="tab-content space-y-6">
+                <!-- Heights Manager for WIPS -->
+                <div class="panel p-4">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                        <i class="fas fa-arrows-up-down"></i> Heights Manager
+                    </h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Clearance Z</label>
+                            <input type="text" id="wips-z-clr" value="1.0" class="rounded px-2 py-2 text-xs text-center font-bold"
+                                   data-help="Height for positioning between features.">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Protect Z</label>
+                            <input type="text" id="wips-z-prot" value="0.5" class="rounded px-2 py-2 text-xs text-center font-bold"
+                                   data-help="This is the height from which the probe turns on and feeds via protected mode.">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Plane</label>
+                            <input type="text" id="wips-z-plane" value="0.1" class="rounded px-2 py-2 text-xs text-center font-bold"
+                                   data-help="For outside features ie. boss or web, the probing plane is the height at which the probe moves between the points, and the letter argument is the height at which the points are taken. Note: letter arguments define the actual measurement depth.&#10;&#10;For inside features ie. a bore or pocket, the probing plane should be inside the feature.">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel p-4">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest">Cycle Configuration</h3>
+                    <select id="wips-cycle" onchange="ui.updateWipsMetadata()" class="w-full rounded px-3 py-2 text-sm font-bold mb-4">
+                        <option value="A10">A10 - Bore (Internal)</option>
+                        <option value="A11">A11 - Boss (External)</option>
+                        <option value="A12">A12 - Rectangular Pocket</option>
+                        <option value="A13">A13 - Rectangular Boss</option>
+                        <option value="A14">A14 - Web X</option>
+                        <option value="A15">A15 - Pocket X</option>
+                        <option value="A16">A16 - Web Y</option>
+                        <option value="A17">A17 - Pocket Y</option>
+                        <option value="A20Z">A20 - Surface Z</option>
+                        <option value="A20X">A20 - Surface X</option>
+                        <option value="A20Y">A20 - Surface Y</option>
+                    </select>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">X Start</label>
+                            <input type="text" id="wips-x" value="0.0" class="rounded px-3 py-2 text-sm font-bold">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Y Start</label>
+                            <input type="text" id="wips-y" value="0.0" class="rounded px-3 py-2 text-sm font-bold">
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 bg-slate-950/50 p-3 rounded border border-slate-800">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] text-slate-400 font-bold uppercase">D (Diameter/Width)</span>
+                            <input type="text" id="wips-d" value="1.0" class="w-24 md:w-20 rounded px-2 py-1 text-sm md:text-xs text-right font-bold">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] text-slate-400 font-bold uppercase">E (Width Y)</span>
+                            <input type="text" id="wips-e" value="1.0" class="w-24 md:w-20 rounded px-2 py-1 text-sm md:text-xs text-right font-bold">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] text-slate-400 font-bold uppercase">H (Z Depth)</span>
+                            <input type="text" id="wips-h" value="-0.5" class="w-24 md:w-20 rounded px-2 py-1 text-sm md:text-xs text-right font-bold">
+                        </div>
+                        <p id="wips-help" class="text-[9px] italic text-blue-400 mt-2 border-t border-slate-800 pt-2 font-bold"></p>
+                    </div>
+                </div>
+
+                <!-- Post Processing Panel (WIPS) -->
+                <div class="panel p-4">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                        <i class="fas fa-file-export"></i> Post Processing
+                    </h3>
+                    <div class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" id="wips-post-wrap" class="accent-rose-600" onchange="ui.togglePostOptions('wips')">
+                        <label for="wips-post-wrap" class="text-[10px] text-slate-400 font-bold uppercase cursor-pointer">% O1234 %</label>
+                    </div>
+                    <div id="wips-post-options" class="hidden space-y-3 pl-6 border-l border-slate-800">
+                        <div class="flex flex-col mb-2">
+                             <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Program # (O)</label>
+                             <input type="text" id="wips-pgm-num" value="1234" class="rounded px-2 py-1 text-xs w-24 font-bold">
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="flex items-center gap-1.5">
+                                <input type="radio" name="wips-m-code" id="wips-m30" value="M30" checked class="accent-rose-600">
+                                <label for="wips-m30" class="text-[10px] text-slate-400 font-bold uppercase">M30</label>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <input type="radio" name="wips-m-code" id="wips-m99" value="M99" class="accent-rose-600">
+                                <label for="wips-m99" class="text-[10px] text-slate-400 font-bold uppercase">M99</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="engine.generateWips()" class="w-full btn-primary text-white font-bold py-4 rounded shadow-lg uppercase tracking-widest text-sm">
+                    Generate G-Code
+                </button>
+            </div>
+
+            <!-- TAB 2: MEASURE FEATURES -->
+            <div id="panel-measure" class="tab-content hidden space-y-4">
+                <div class="panel p-4">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                        <i class="fas fa-arrows-up-down"></i> Heights Manager
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Clearance Z</label>
+                            <input type="text" id="measure-z-clr" value="1.0" class="rounded px-3 py-2 text-sm font-bold"
+                                   data-help="Height for positioning between features.">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Protect Z</label>
+                            <input type="text" id="measure-z-prot" value="0.5" class="rounded px-3 py-2 text-sm font-bold"
+                                   data-help="This is the height from which the probe turns on and feeds via protected mode.">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Post Processing Panel (Measure) -->
+                <div class="panel p-4">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                        <i class="fas fa-file-export"></i> Post Processing
+                    </h3>
+                    <div class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" id="measure-post-wrap" class="accent-rose-600" onchange="ui.togglePostOptions('measure')">
+                        <label for="measure-post-wrap" class="text-[10px] text-slate-400 font-bold uppercase cursor-pointer">% O1234 %</label>
+                    </div>
+                    <div id="measure-post-options" class="hidden space-y-3 pl-6 border-l border-slate-800">
+                        <div class="flex flex-col mb-2">
+                             <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Program # (O)</label>
+                             <input type="text" id="measure-pgm-num" value="1234" class="rounded px-2 py-1 text-xs w-24 font-bold">
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="flex items-center gap-1.5">
+                                <input type="radio" name="measure-m-code" id="measure-m30" value="M30" checked class="accent-rose-600">
+                                <label for="measure-m30" class="text-[10px] text-slate-400 font-bold uppercase">M30</label>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <input type="radio" name="measure-m-code" id="measure-m99" value="M99" class="accent-rose-600">
+                                <label for="measure-m99" class="text-[10px] text-slate-400 font-bold uppercase">M99</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center px-1">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Sequence Manager</h3>
+                    <button onclick="ui.addFeatureRow()" class="text-[10px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded font-bold uppercase transition">
+                        <i class="fas fa-plus mr-1"></i> Add Feature
+                    </button>
+                </div>
+                <div id="feature-list" class="space-y-4 max-h-[500px] md:max-h-full overflow-y-auto pr-2"></div>
+                <button onclick="engine.generateMeasureSequence()" class="w-full btn-primary text-white font-bold py-4 rounded shadow-lg uppercase tracking-widest text-sm mt-4">
+                    Generate Sequence
+                </button>
+            </div>
+
+            <!-- TAB 3: FLATNESS -->
+            <div id="panel-flatness" class="tab-content hidden space-y-6">
+                <div class="panel p-4">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest">Flatness Logic</h3>
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Sacrificial WCS</label>
+                            <input type="text" id="flat-sac-wcs" value="99" class="rounded px-3 py-2 text-sm font-bold">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Tolerance</label>
+                            <input type="text" id="flat-tol" value="0.002" class="rounded px-3 py-2 text-sm font-bold">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Tol #</label>
+                            <input type="text" id="flat-mac-tol" value="800" class="rounded px-2 py-1.5 text-xs text-center font-bold">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Min #</label>
+                            <input type="text" id="flat-mac-min" value="801" class="rounded px-2 py-1.5 text-xs text-center font-bold">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Max #</label>
+                            <input type="text" id="flat-mac-max" value="802" class="rounded px-2 py-1.5 text-xs text-center font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Post Processing Panel (Flatness) -->
+                <div class="panel p-4">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                        <i class="fas fa-file-export"></i> Post Processing
+                    </h3>
+                    <div class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" id="flatness-post-wrap" class="accent-rose-600" onchange="ui.togglePostOptions('flatness')">
+                        <label for="flatness-post-wrap" class="text-[10px] text-slate-400 font-bold uppercase cursor-pointer">% O1234 %</label>
+                    </div>
+                    <div id="flatness-post-options" class="hidden space-y-3 pl-6 border-l border-slate-800">
+                        <div class="flex flex-col mb-2">
+                             <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Program # (O)</label>
+                             <input type="text" id="flatness-pgm-num" value="1234" class="rounded px-2 py-1 text-xs w-24 font-bold">
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="flex items-center gap-1.5">
+                                <input type="radio" name="flatness-m-code" id="flatness-m30" value="M30" checked class="accent-rose-600">
+                                <label for="flatness-m30" class="text-[10px] text-slate-400 font-bold uppercase">M30</label>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <input type="radio" name="flatness-m-code" id="flatness-m99" value="M99" class="accent-rose-600">
+                                <label for="flatness-m99" class="text-[10px] text-slate-400 font-bold uppercase">M99</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="flatness-points" class="space-y-4"></div>
+                <button onclick="ui.addFlatnessPoint()" class="w-full bg-slate-800 py-2 rounded text-[10px] uppercase font-bold border border-slate-700 text-slate-400">Add Point</button>
+                <button onclick="engine.generateFlatness()" class="w-full btn-primary text-white font-bold py-4 rounded shadow-lg uppercase tracking-widest text-sm mt-4">Generate Routine</button>
+            </div>
+
+            <!-- TAB 4: MACRO REF -->
+            <div id="panel-macro" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="panel p-6">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest">Tool Offset Variables</h3>
+                    <div class="flex items-center gap-4 mb-6">
+                        <label class="text-[10px] text-slate-500 uppercase font-black">Tool Selection</label>
+                        <input type="number" id="macro-tool-input" oninput="ui.updateMacroRef()" value="1" class="w-24 rounded px-3 py-2 text-lg font-bold border-rose-900/50">
+                    </div>
+                    <div class="space-y-3">
+                        <div class="bg-slate-950 p-4 rounded border border-slate-800 flex justify-between items-center">
+                            <span class="text-xs text-slate-400 font-bold">LENGTH GEOM</span>
+                            <span id="mac-h-geom" class="text-blue-400 font-mono text-xl font-black">#2001</span>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded border border-slate-800 flex justify-between items-center">
+                            <span class="text-xs text-slate-400 font-bold">LENGTH WEAR</span>
+                            <span id="mac-h-wear" class="text-rose-400 font-mono text-xl font-black">#2201</span>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded border border-slate-800 flex justify-between items-center">
+                            <span class="text-xs text-slate-400 font-bold">DIAMETER GEOM</span>
+                            <span id="mac-d-geom" class="text-emerald-400 font-mono text-xl font-black">#2401</span>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded border border-slate-800 flex justify-between items-center">
+                            <span class="text-xs text-slate-400 font-bold">DIAMETER WEAR</span>
+                            <span id="mac-d-wear" class="text-yellow-400 font-mono text-xl font-black">#2601</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel p-6 lg:col-span-2">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest">Work Offset Dictionary</h3>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+                        <select id="macro-wcs-select" onchange="ui.updateWorkMacros()" class="w-full sm:w-48 rounded px-3 py-2 text-sm font-bold">
+                            <option value="G52">G52 (Shift)</option>
+                            <option value="G54" selected>G54</option>
+                            <option value="G55">G55</option>
+                            <option value="G56">G56</option>
+                            <option value="G57">G57</option>
+                            <option value="G58">G58</option>
+                            <option value="G59">G59</option>
+                        </select>
+                        <div class="flex gap-4">
+                            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span><span class="text-[10px] text-slate-500 uppercase">7k</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span><span class="text-[10px] text-slate-500 uppercase">14k</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto rounded-xl border border-slate-800 shadow-2xl">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-900/50 text-slate-500 uppercase tracking-tighter">
+                                <tr>
+                                    <th class="py-3 px-4 text-left">Axis</th>
+                                    <th class="py-3 px-4 text-center">Standard</th>
+                                    <th class="py-3 px-4 text-center">Extended</th>
+                                </tr>
+                            </thead>
+                            <tbody id="macro-work-tbody" class="divide-y divide-slate-800 text-center font-mono"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-8 border-t border-slate-800 pt-6">
+                        <h3 class="text-[10px] font-bold text-slate-500 uppercase mb-3 tracking-widest">Variable Reverse Lookup</h3>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <input type="text" id="macro-search" placeholder="Enter # Variable" class="flex-1 rounded-lg px-4 py-2 text-sm font-bold">
+                            <button onclick="ui.doReverseLookup()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-white text-xs font-bold uppercase tracking-widest transition">Search</button>
+                        </div>
+                        <div id="macro-search-result" class="mt-4 p-4 bg-slate-950 rounded-lg text-xs text-blue-300 font-mono italic border border-slate-800 min-h-[50px] flex items-center">
+                            Awaiting input...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN -->
+        <section id="right-terminal" class="flex-1 flex flex-col bg-black min-h-[300px] md:min-h-0 transition-all duration-300">
+            <div class="bg-slate-900 px-4 md:px-6 py-2 border-b border-slate-800 flex justify-between items-center shrink-0">
+                <span class="text-[10px] font-bold text-slate-500 tracking-widest uppercase">NC Terminal</span>
+                <div class="flex gap-2">
+                    <button onclick="ui.copyOutput()" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-slate-300 font-bold border border-slate-700 transition">COPY</button>
+                    <button onclick="ui.clearOutput()" class="text-[10px] bg-rose-900/20 hover:bg-rose-900/40 px-3 py-1.5 rounded text-rose-400 font-bold border border-rose-900/50 transition">CLEAR</button>
+                </div>
+            </div>
+            <div id="output-terminal" class="flex-1 gcode-terminal p-4 md:p-8 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap select-all">
+( APEXPROBE CORE INITIALIZED )
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-900 border-t border-slate-800 px-4 md:px-6 py-2 flex justify-between items-center shrink-0">
+        <div class="flex gap-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest uppercase">
+            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_#10b981]"></span> HAAS NGC READY</span>
+        </div>
+        <div class="text-[10px] text-slate-600 font-bold tracking-tight uppercase">APEXPROBE MOBILE</div>
+    </footer>
+
+    <script>
+        const AXES = ["X", "Y", "Z", "A", "B", "C"];
+
+        // --- HELP SYSTEM LOGIC ---
+        let helpTimer = null;
+        const helpBox = document.getElementById('help-box');
+        const helpText = document.getElementById('help-text');
+
+        document.addEventListener('mouseover', (e) => {
+            const target = e.target.closest('[data-help]');
+            if (!target) return;
+
+            helpTimer = setTimeout(() => {
+                const text = target.getAttribute('data-help');
+                helpText.textContent = text;
+                helpBox.style.display = 'block';
+                setTimeout(() => helpBox.classList.add('visible'), 10);
+            }, 1000); // 1 Second Dwell
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (helpBox.classList.contains('visible')) {
+                helpBox.style.left = (e.clientX + 15) + 'px';
+                helpBox.style.top = (e.clientY + 15) + 'px';
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const target = e.target.closest('[data-help]');
+            if (!target) return;
+            
+            clearTimeout(helpTimer);
+            helpBox.classList.remove('visible');
+            setTimeout(() => {
+                if(!helpBox.classList.contains('visible')) helpBox.style.display = 'none';
+            }, 200);
+        });
+
+        // --- G-CODE GENERATION ENGINE ---
+        window.engine = {
+            fDec: (v) => { let s = String(v).trim(); return s ? (s.includes(".") ? s : s + ".") : "0."; },
+            formatWcs: (num, isExt) => {
+                const val = parseInt(String(num).replace(/G/g, '').trim()) || 54;
+                return isExt ? { g: `G154 P${val}`, w: `W154.${String(val).padStart(2, '0')}` } : { g: `G${val}`, w: `W${val}.` };
+            },
+            G_HOME_Z: "G00 G91 G28 Z0.",
+            G_SAFE_XY: "G00 G90 G154 P99 X0. Y0.", 
+            PROBE_ON: "G65 P9832",
+            PROBE_OFF: "G65 P9833",
+            PROBE_PROTECT: "G65 P9810",
+            WIPS_STORM: "G65 P9995",
+
+            applyWrapper: (lines, isWrapped, pgmNum, mCode) => {
+                if (!isWrapped) {
+                    lines.push("M01");
+                    return lines;
+                }
+                const wrapped = ["%", `O${pgmNum.replace('O','')}`];
+                wrapped.push(...lines);
+                wrapped.push(mCode);
+                wrapped.push("%");
+                return wrapped;
+            },
+
+            generateWips: () => {
+                const tNum = document.getElementById('global-tool').value;
+                const wcs = document.getElementById('global-wcs').value;
+                const isExt = document.getElementById('global-ext').checked;
+                const key = document.getElementById('wips-cycle').value;
+                const zClr = engine.fDec(document.getElementById('wips-z-clr').value);
+                const zProt = engine.fDec(document.getElementById('wips-z-prot').value);
+                const zPlane = engine.fDec(document.getElementById('wips-z-plane').value);
+                const { g: gWcs } = engine.formatWcs(wcs, isExt);
+                const d = engine.fDec(document.getElementById('wips-d').value);
+                const e = engine.fDec(document.getElementById('wips-e').value);
+                const h = engine.fDec(document.getElementById('wips-h').value);
+
+                const getCycleLine = (k) => {
+                    const { w } = engine.formatWcs(wcs, isExt);
+                    if(k === "A20Z") return `${engine.WIPS_STORM} A20. H${h} ${w}`;
+                    if(k === "A20X") return `${engine.WIPS_STORM} A20. D${d} ${w}`;
+                    if(k === "A20Y") return `${engine.WIPS_STORM} A20. E${e} ${w}`;
+                    if(k === "A10") return `${engine.WIPS_STORM} A10. D${d} ${w}`;
+                    if(k === "A11") return `${engine.WIPS_STORM} A11. D${d} H${h} ${w}`;
+                    if(k === "A12") return `${engine.WIPS_STORM} A12. D${d} E${e} ${w}`;
+                    if(k === "A13") return `${engine.WIPS_STORM} A13. D${d} E${e} H${h} ${w}`;
+                    return `${engine.WIPS_STORM} ${k}. D${d} E${e} H${h} ${w}`;
+                };
+
+                let lines = [
+                    `(PROBE CYCLE: ${key})`, engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`,
+                    `G00 G90 ${gWcs} X${engine.fDec(document.getElementById('wips-x').value)} Y${engine.fDec(document.getElementById('wips-y').value)}`,
+                    `G43 H${tNum} Z${zClr}`, `G00 Z${zProt}`, engine.PROBE_ON, `${engine.PROBE_PROTECT} Z${zPlane} F50.`, "",
+                    getCycleLine(key),
+                    "", engine.PROBE_OFF, `G43 H${tNum} Z${zClr}`, engine.G_HOME_Z, engine.G_SAFE_XY
+                ];
+
+                const isWrapped = document.getElementById('wips-post-wrap').checked;
+                const pgmNum = document.getElementById('wips-pgm-num').value || '1234';
+                const mCode = document.querySelector('input[name="wips-m-code"]:checked').value;
+                
+                lines = engine.applyWrapper(lines, isWrapped, pgmNum, mCode);
+                ui.setOutput(lines.join("\n"));
+                if(window.innerWidth < 768) document.getElementById('right-terminal').scrollIntoView({ behavior: 'smooth' });
+            },
+
+            generateMeasureSequence: () => {
+                const tNum = document.getElementById('global-tool').value;
+                const wcs = document.getElementById('global-wcs').value;
+                const isExt = document.getElementById('global-ext').checked;
+                const zClr = engine.fDec(document.getElementById('measure-z-clr').value);
+                const zProt = engine.fDec(document.getElementById('measure-z-prot').value);
+                const { g: gWcs } = engine.formatWcs(wcs, isExt);
+                
+                let lines = ["(MULTI-FEATURE SEQUENCE)", "G103 P1 (LIMIT LOOK-AHEAD)", "(RESET MACROS)"];
+                const rows = document.querySelectorAll('.feature-row');
+                rows.forEach(r => { let m = r.querySelector('.feat-macro').value; if(m) lines.push(`#${m.replace('#','')} = 0.`); });
+                
+                lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G00 G90 ${gWcs}`, `G43 H${tNum} Z${zClr}`, engine.PROBE_ON);
+                
+                rows.forEach((r, i) => {
+                    const k = r.querySelector('.feat-cycle').value;
+                    const macro = r.querySelector('.feat-macro').value.replace('#','');
+                    const d = r.querySelector('.feat-d').value;
+                    const e = r.querySelector('.feat-e').value;
+                    const h = r.querySelector('.feat-h').value;
+                    const plane = engine.fDec(r.querySelector('.feat-plane').value);
+                    const tol = r.querySelector('.feat-tol').value.trim();
+                    const comment = r.querySelector('.feat-comment').value.toUpperCase() || `FEAT ${i+1}`;
+                    const { w } = engine.formatWcs(wcs, isExt);
+                    
+                    lines.push("", `N${(tNum*100)+i+1} (${comment})`);
+                    lines.push(`G00 X${engine.fDec(r.querySelector('.feat-x').value)} Y${engine.fDec(r.querySelector('.feat-y').value)}`);
+                    lines.push(`G00 Z${zProt}`);
+                    lines.push(`${engine.PROBE_PROTECT} Z${plane} F50.`);
+                    lines.push(`${engine.WIPS_STORM} ${k}. D${engine.fDec(d)} E${engine.fDec(e)} H${engine.fDec(h)} ${w}`);
+                    
+                    if(macro) {
+                        lines.push(`#${macro} = #188 (STORE MEASURED)`);
+                        if(tol) {
+                            let nominal = "0.";
+                            if (["A10", "A11", "A14", "A15", "A20X"].includes(k)) nominal = engine.fDec(d);
+                            else if (["A16", "A17", "A20Y"].includes(k)) nominal = engine.fDec(e);
+                            else if (k === "A20Z") nominal = engine.fDec(h);
+                            else if (["A12", "A13"].includes(k)) nominal = engine.fDec(d);
+                            lines.push(`(--- ${comment} EVALUATION ---)`);
+                            lines.push(`#100 = ABS[ #${macro} - ${nominal} ] (DEVIATION)`);
+                            lines.push(`IF [ #100 GT ${engine.fDec(tol)} ] #3000 = 1 (${comment} OUT OF TOL)`);
+                        }
+                    }
+                    lines.push(`G00 Z${zClr}`);
+                });
+                
+                lines.push("", engine.PROBE_OFF, "G103 P0 (RESTORE LOOK-AHEAD)", engine.G_HOME_Z, engine.G_SAFE_XY);
+                
+                const isWrapped = document.getElementById('measure-post-wrap').checked;
+                const pgmNum = document.getElementById('measure-pgm-num').value || '1234';
+                const mCode = document.querySelector('input[name="measure-m-code"]:checked').value;
+
+                lines = engine.applyWrapper(lines, isWrapped, pgmNum, mCode);
+                ui.setOutput(lines.join("\n"));
+                if(window.innerWidth < 768) document.getElementById('right-terminal').scrollIntoView({ behavior: 'smooth' });
+            },
+
+            generateFlatness: () => {
+                const tNum = document.getElementById('global-tool').value;
+                const wcs = document.getElementById('global-wcs').value;
+                const isExt = document.getElementById('global-ext').checked;
+                const sacWcs = document.getElementById('flat-sac-wcs').value;
+                const { g: gWcs } = engine.formatWcs(wcs, isExt);
+                const { w: wSac } = engine.formatWcs(sacWcs, true);
+                let lines = ["(--- FLATNESS ROUTINE ---)", `(SACRIFICIAL ${wSac})`, "G103 P1", "(INIT VARS)"];
+                const points = document.querySelectorAll('.flat-point');
+                points.forEach(p => lines.push(`#${p.querySelector('.flat-pt-m').value}=0.`));
+                lines.push(`#${document.getElementById('flat-mac-min').value}=0.`, `#${document.getElementById('flat-mac-max').value}=0.`, `#${document.getElementById('flat-mac-tol').value}=${engine.fDec(document.getElementById('flat-tol').value)}`);
+                lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G90 ${gWcs}`, `G43 H${tNum} Z1.0`, engine.PROBE_ON, "");
+                points.forEach((p, i) => lines.push(`(PT ${i+1})`, `${engine.PROBE_PROTECT} X${engine.fDec(p.querySelector('.flat-pt-x').value)} Y${engine.fDec(p.querySelector('.flat-pt-y').value)} Z0.5`, `${engine.WIPS_STORM} A20. H-1.0 ${wSac}`, `#${p.querySelector('.flat-pt-m').value}=#5063`, ""));
+                lines.push(engine.PROBE_OFF, engine.G_HOME_Z);
+                
+                const isWrapped = document.getElementById('flatness-post-wrap').checked;
+                const pgmNum = document.getElementById('flatness-pgm-num').value || '1234';
+                const mCode = document.querySelector('input[name="flatness-m-code"]:checked').value;
+
+                lines = engine.applyWrapper(lines, isWrapped, pgmNum, mCode);
+                ui.setOutput(lines.join("\n"));
+                if(window.innerWidth < 768) document.getElementById('right-terminal').scrollIntoView({ behavior: 'smooth' });
+            }
+        };
+
+        window.ui = {
+            switchTab: (tabId) => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active', 'text-white'));
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.add('text-slate-400'));
+                const activeBtn = document.getElementById('tab-' + tabId);
+                if (activeBtn) activeBtn.classList.add('tab-active', 'text-white');
+                
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                const activePanel = document.getElementById('panel-' + tabId);
+                if (activePanel) activePanel.classList.remove('hidden');
+                
+                const terminal = document.getElementById('right-terminal');
+                const sidebar = document.getElementById('left-sidebar');
+                const machinePanel = document.getElementById('machine-setup-panel');
+
+                if (tabId === 'macro') {
+                    terminal.classList.add('hidden');
+                    machinePanel.classList.add('hidden');
+                    sidebar.classList.remove('md:w-[450px]');
+                    sidebar.classList.add('w-full');
+                    ui.updateMacroRef();
+                    ui.updateWorkMacros();
+                } else {
+                    terminal.classList.remove('hidden');
+                    machinePanel.classList.remove('hidden');
+                    sidebar.classList.add('md:w-[450px]');
+                    if (tabId === 'wips') ui.updateWipsMetadata();
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+
+            togglePostOptions: (prefix) => {
+                const isChecked = document.getElementById(prefix + '-post-wrap').checked;
+                const optionsDiv = document.getElementById(prefix + '-post-options');
+                if (optionsDiv) optionsDiv.classList.toggle('hidden', !isChecked);
+            },
+
+            setOutput: (txt) => { document.getElementById('output-terminal').textContent = txt; },
+            clearOutput: () => ui.setOutput("( TERMINAL CLEARED )"),
+            copyOutput: () => { const t = document.getElementById('output-terminal').textContent; navigator.clipboard.writeText(t); },
+
+            updateWipsMetadata: () => {
+                const key = document.getElementById('wips-cycle').value;
+                const help = document.getElementById('wips-help');
+                const meta = {
+                    "A10": "Bore (Internal)", "A11": "Boss (External)", "A12": "Rect Pocket", 
+                    "A13": "Rect Boss", "A14": "Web X", "A15": "Pocket X", "A16": "Web Y", 
+                    "A17": "Pocket Y", "A20Z": "Surface Z", "A20X": "Surface X", "A20Y": "Surface Y"
+                };
+                if(help) help.textContent = `${meta[key] || key} Active. Adjust parameters below.`;
+            },
+
+            updateMacroRef: () => {
+                const t = parseInt(document.getElementById('macro-tool-input').value) || 1;
+                document.getElementById('mac-h-geom').textContent = `#${2000+t}`;
+                document.getElementById('mac-h-wear').textContent = `#${2200+t}`;
+                document.getElementById('mac-d-geom').textContent = `#${2400+t}`;
+                document.getElementById('mac-d-wear').textContent = `#${2600+t}`;
+            },
+
+            updateWorkMacros: () => {
+                const sel = document.getElementById('macro-wcs-select').value;
+                const tbody = document.getElementById('macro-work-tbody');
+                if(!tbody) return;
+                tbody.innerHTML = '';
+                AXES.forEach((ax, i) => {
+                    let bank7 = "---", bank14 = "---";
+                    if (sel === "G52") { bank7 = `#${5201+i}`; }
+                    else if (sel.startsWith("G5") && sel.length === 3) {
+                        const g = parseInt(sel.substring(1));
+                        bank7 = `#${5221 + (g-54)*20 + i}`;
+                    } else if (sel.includes("P")) {
+                        const p = parseInt(sel.split("P")[1]);
+                        bank7 = `#${7001 + (p-1)*20 + i}`;
+                        bank14 = `#${14001 + (p-1)*20 + i}`;
+                    }
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-900/40 transition text-xs sm:text-sm">
+                            <td class="py-3 px-4 font-black text-slate-500 border-r border-slate-800">${ax}</td>
+                            <td class="py-3 px-4 text-blue-400 font-black">${bank7}</td>
+                            <td class="py-3 px-4 text-rose-400 font-black">${bank14}</td>
+                        </tr>`;
+                });
+            },
+
+            doReverseLookup: () => {
+                const num = parseInt(document.getElementById('macro-search').value);
+                const res = document.getElementById('macro-search-result');
+                if(!num || !res) return;
+                let txt = "Variable Not In Range.";
+                if (num >= 2001 && num <= 2200) txt = `Tool ${num-2000} Len Geom`;
+                else if (num >= 2201 && num <= 2400) txt = `Tool ${num-2200} Len Wear`;
+                else if (num >= 5221 && num <= 5339) { let off = Math.floor((num-5221)/20); txt = `G${54+off} Axis: ${AXES[(num-5221)%20]}`; }
+                else if (num >= 7001 && num <= 7400) { let p = Math.floor((num-7001)/20)+1; txt = `G154 P${p} (7k) Axis: ${AXES[(num-7001)%20]}`; }
+                else if (num >= 14001 && num <= 15980) { let p = Math.floor((num-14001)/20)+1; txt = `G154 P${p} (14k) Axis: ${AXES[(num-14001)%20]}`; }
+                else if (num === 188) txt = "Result: Last Measured Dim";
+                else if (num === 5063) txt = "Machine Position Z";
+                res.textContent = txt;
+            },
+
+            addFeatureRow: () => {
+                const container = document.getElementById('feature-list');
+                if(!container) return;
+                const id = container.children.length + 1;
+                const div = document.createElement('div');
+                div.className = "feature-row panel p-3 bg-slate-900/60";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-[9px] font-bold text-slate-600 uppercase">FEAT #${id}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" class="text-slate-700 hover:text-rose-500"><i class="fas fa-trash text-[9px]"></i></button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Cycle Type</label>
+                            <select class="feat-cycle w-full rounded px-2 py-1 text-xs">
+                                <option value="A10">A10 - Bore</option>
+                                <option value="A11">A11 - Boss</option>
+                                <option value="A12">A12 - Rect Pkt</option>
+                                <option value="A15">A15 - Pocket X</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Comment</label>
+                            <input type="text" placeholder="Comment" class="feat-comment w-full rounded px-2 py-1 text-xs">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 mb-3">
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">X Start</label>
+                            <input type="text" class="feat-x w-full rounded px-2 py-1 text-xs" value="0.0">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Y Start</label>
+                            <input type="text" class="feat-y w-full rounded px-2 py-1 text-xs" value="0.0">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Macro #</label>
+                            <input type="text" class="feat-macro w-full rounded px-2 py-1 text-xs" value="${900+id}">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-blue-500 font-bold uppercase ml-1 mb-0.5">Tol</label>
+                            <input type="text" class="feat-tol w-full rounded px-2 py-1 text-xs border-blue-900/50" placeholder="0.002">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2">
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">D Arg</label>
+                            <input type="text" class="feat-d w-full rounded px-2 py-1 text-xs" value="1.0">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">E Arg</label>
+                            <input type="text" class="feat-e w-full rounded px-2 py-1 text-xs" value="0">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">H Arg</label>
+                            <input type="text" class="feat-h w-full rounded px-2 py-1 text-xs" value="0">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Plane</label>
+                            <input type="text" class="feat-plane w-full rounded px-2 py-1 text-xs" value="0.1">
+                        </div>
+                    </div>`;
+                container.appendChild(div);
+            },
+
+            addFlatnessPoint: () => {
+                const container = document.getElementById('flatness-points');
+                if(!container) return;
+                const id = container.children.length + 1;
+                const div = document.createElement('div');
+                div.className = "flat-point panel p-3 bg-slate-900/60";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[9px] text-slate-700 font-bold uppercase">PT #${id}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" class="text-slate-700 hover:text-rose-500"><i class="fas fa-trash text-[9px]"></i></button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">X Pos</label>
+                            <input type="text" class="flat-pt-x w-full rounded px-2 py-1 text-xs" value="0.0">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Y Pos</label>
+                            <input type="text" class="flat-pt-y w-full rounded px-2 py-1 text-xs" value="0.0">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Macro #</label>
+                            <input type="text" class="flat-pt-m w-full rounded px-2 py-1 text-xs text-center" value="${900+id}">
+                        </div>
+                    </div>`;
+                container.appendChild(div);
+            }
+        };
+
+        function initApp() {
+            const wcsSel = document.getElementById('macro-wcs-select');
+            if(wcsSel) {
+                for(let i=1; i<=99; i++) { 
+                    const opt = document.createElement('option'); 
+                    opt.value = `G154 P${i}`; 
+                    opt.textContent = `G154 P${i}`; 
+                    wcsSel.appendChild(opt); 
+                }
+            }
+            engine.addFeatureRow();
+            engine.addFlatnessPoint(); engine.addFlatnessPoint(); engine.addFlatnessPoint();
+            ui.updateWipsMetadata();
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+        window.onload = initApp;
+    </script>
+</body>
+</html>
