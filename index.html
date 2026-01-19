@@ -105,7 +105,7 @@
         <div class="flex items-center justify-between w-full md:w-auto py-2 md:py-0">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl tracking-tighter text-white brand-logo uppercase">APEX<span class="text-rose-600">PROBE</span></h1>
-                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.3.2</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.3.4</span>
             </div>
             <button class="md:hidden text-slate-500 hover:text-white text-sm"><i class="fas fa-cog"></i></button>
         </div>
@@ -605,11 +605,9 @@
                     
                     if(macro) {
                         lines.push(`#${macro} = #188 (STORE MEASURED)`);
-                        if(tol) {
-                            let nominal = "0.";
-                            if (key === "A20Z") nominal = engine.fDec(vals.h);
-                            else if (key === "A20Y") nominal = engine.fDec(vals.e);
-                            else nominal = engine.fDec(vals.d);
+                        // Implementation of the branch logic specifically for size cycles A10-A17
+                        if(tol && !key.startsWith("A20")) {
+                            let nominal = engine.fDec(vals.d); 
                             lines.push(`(--- ${comment} EVALUATION ---)`);
                             lines.push(`#100 = ABS[ #${macro} - ${nominal} ] (DEVIATION)`);
                             lines.push(`IF [ #100 GT ${engine.fDec(tol)} ] #3000 = 1 (${comment} OUT OF TOL)`);
@@ -631,14 +629,47 @@
                 const wcs = document.getElementById('global-wcs').value;
                 const isExt = document.getElementById('global-ext').checked;
                 const sacWcs = document.getElementById('flat-sac-wcs').value;
+                const tolVal = document.getElementById('flat-tol').value;
+                const tolMac = document.getElementById('flat-mac-tol').value;
+                const minMac = document.getElementById('flat-mac-min').value;
+                const maxMac = document.getElementById('flat-mac-max').value;
+
                 const { g: gWcs } = engine.formatWcs(wcs, isExt);
                 const { w: wSac } = engine.formatWcs(sacWcs, true);
                 let lines = ["(--- FLATNESS ROUTINE ---)", `(SACRIFICIAL ${wSac})`, "G103 P1", "(INIT VARS)"];
                 const points = document.querySelectorAll('.flat-point');
-                points.forEach(p => lines.push(`#${p.querySelector('.flat-pt-m').value}=0.`));
-                lines.push(`#${document.getElementById('flat-mac-min').value}=0.`, `#${document.getElementById('flat-mac-max').value}=0.`, `#${document.getElementById('flat-mac-tol').value}=${engine.fDec(document.getElementById('flat-tol').value)}`);
+                const ptMacros = [];
+                
+                points.forEach(p => {
+                    const m = p.querySelector('.flat-pt-m').value;
+                    ptMacros.push(m);
+                    lines.push(`#${m}=0.`);
+                });
+
+                lines.push(`#${minMac}=0.`, `#${maxMac}=0.`, `#${tolMac}=${engine.fDec(tolVal)}`);
                 lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G90 ${gWcs}`, `G43 H${tNum} Z1.0`, engine.PROBE_ON, "");
-                points.forEach((p, i) => lines.push(`(PT ${i+1})`, `${engine.PROBE_PROTECT} X${engine.fDec(p.querySelector('.flat-pt-x').value)} Y${engine.fDec(p.querySelector('.flat-pt-y').value)} Z0.5`, `${engine.WIPS_STORM} A20. H-1.0 ${wSac}`, `#${p.querySelector('.flat-pt-m').value}=#5063`, ""));
+                
+                points.forEach((p, i) => {
+                    lines.push(`(PT ${i+1})`, `${engine.PROBE_PROTECT} X${engine.fDec(p.querySelector('.flat-pt-x').value)} Y${engine.fDec(p.querySelector('.flat-pt-y').value)} Z0.5`, `${engine.WIPS_STORM} A20. H-1.0 ${wSac}`, `#${ptMacros[i]}=#5063`, "");
+                });
+
+                // Implementation of the Flatness evaluation logic
+                if (ptMacros.length > 0) {
+                    lines.push("(--- EVALUATE RESULTS ---)");
+                    lines.push(`#${minMac} = #${ptMacros[0]} (INITIAL MIN)`);
+                    lines.push(`#${maxMac} = #${ptMacros[0]} (INITIAL MAX)`);
+                    
+                    for (let k = 1; k < ptMacros.length; k++) {
+                        lines.push(`(CHECK PT ${k+1})`);
+                        lines.push(`IF [ #${ptMacros[k]} LT #${minMac} ] #${minMac} = #${ptMacros[k]}`);
+                        lines.push(`IF [ #${ptMacros[k]} GT #${maxMac} ] #${maxMac} = #${ptMacros[k]}`);
+                    }
+                    
+                    lines.push("", "(--- FINAL RANGE CHECK ---)");
+                    lines.push(`#100 = ABS[ #${maxMac} - #${minMac} ] (TOTAL DEVIATION)`);
+                    lines.push(`IF [ #100 GT #${tolMac} ] #3000 = 1 (FLATNESS OUT OF TOL)`);
+                }
+
                 lines.push(engine.PROBE_OFF, engine.G_HOME_Z);
                 const isWrapped = document.getElementById('flatness-post-wrap').checked;
                 const pgmNum = document.getElementById('flatness-pgm-num').value || '1234';
