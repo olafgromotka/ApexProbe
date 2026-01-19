@@ -82,18 +82,13 @@
             display: none;
             transition: opacity 0.2s;
         }
-        #help-box.visible {
-            opacity: 1;
-        }
-        #help-text {
-            white-space: pre-line;
-            font-size: 0.75rem;
-            line-height: 1.4;
-        }
-        .brand-logo {
-            font-weight: 900;
-            letter-spacing: -0.02em;
-        }
+        #help-box.visible { opacity: 1; }
+        #help-text { white-space: pre-line; font-size: 0.75rem; line-height: 1.4; }
+        .brand-logo { font-weight: 900; letter-spacing: -0.02em; }
+
+        /* Argument Styles for Permitted Panels */
+        .arg-label { font-size: 8px; color: #94a3b8; font-weight: bold; text-transform: uppercase; margin-left: 4px; margin-bottom: 2px; }
+        .arg-inactive { opacity: 0.25; pointer-events: none; filter: grayscale(1); }
     </style>
 </head>
 <body class="flex flex-col">
@@ -110,7 +105,7 @@
         <div class="flex items-center justify-between w-full md:w-auto py-2 md:py-0">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl tracking-tighter text-white brand-logo uppercase">APEX<span class="text-rose-600">PROBE</span></h1>
-                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.3.1</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.3.2</span>
             </div>
             <button class="md:hidden text-slate-500 hover:text-white text-sm"><i class="fas fa-cog"></i></button>
         </div>
@@ -152,7 +147,7 @@
 
             <!-- TAB 1: VIRTUAL WIPS -->
             <div id="panel-wips" class="tab-content space-y-6">
-                <!-- Heights Manager for WIPS -->
+                <!-- Heights Manager -->
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
                         <i class="fas fa-arrows-up-down"></i> Heights Manager
@@ -182,7 +177,7 @@
                         <option value="A10">A10 - Bore (Internal)</option>
                         <option value="A11">A11 - Boss (External)</option>
                         <option value="A12">A12 - Rectangular Pocket</option>
-                        <option value="A13">A13 - Rectangular Boss</option>
+                        <option value="A13">A13 - Rectangular Block</option>
                         <option value="A14">A14 - Web X</option>
                         <option value="A15">A15 - Pocket X</option>
                         <option value="A16">A16 - Web Y</option>
@@ -203,24 +198,20 @@
                         </div>
                     </div>
 
-                    <div class="space-y-2 bg-slate-950/50 p-3 rounded border border-slate-800">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] text-slate-400 font-bold uppercase">D (Diameter/Width)</span>
-                            <input type="text" id="wips-d" value="1.0" class="w-24 md:w-20 rounded px-2 py-1 text-sm md:text-xs text-right font-bold">
+                    <div class="space-y-3 bg-slate-950/50 p-4 rounded border border-slate-800">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div id="wips-arg-d-cont"><label class="arg-label" id="wips-lab-d">D</label><input type="text" id="wips-d" value="1.0" class="w-full rounded px-2 py-1 text-sm font-bold"></div>
+                            <div id="wips-arg-e-cont"><label class="arg-label" id="wips-lab-e">E</label><input type="text" id="wips-e" value="0." class="w-full rounded px-2 py-1 text-sm font-bold"></div>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] text-slate-400 font-bold uppercase">E (Width Y)</span>
-                            <input type="text" id="wips-e" value="1.0" class="w-24 md:w-20 rounded px-2 py-1 text-sm md:text-xs text-right font-bold">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] text-slate-400 font-bold uppercase">H (Z Depth)</span>
-                            <input type="text" id="wips-h" value="-0.5" class="w-24 md:w-20 rounded px-2 py-1 text-sm md:text-xs text-right font-bold">
+                        <div class="grid grid-cols-3 gap-2">
+                            <div id="wips-arg-h-cont"><label class="arg-label" id="wips-lab-h">H</label><input type="text" id="wips-h" value="0." class="w-full rounded px-2 py-1 text-xs font-bold text-center"></div>
+                            <div id="wips-arg-i-cont"><label class="arg-label" id="wips-lab-i">I</label><input type="text" id="wips-i" value="0." class="w-full rounded px-2 py-1 text-xs font-bold text-center"></div>
+                            <div id="wips-arg-j-cont"><label class="arg-label" id="wips-lab-j">J</label><input type="text" id="wips-j" value="0." class="w-full rounded px-2 py-1 text-xs font-bold text-center"></div>
                         </div>
                         <p id="wips-help" class="text-[9px] italic text-blue-400 mt-2 border-t border-slate-800 pt-2 font-bold"></p>
                     </div>
                 </div>
 
-                <!-- Post Processing Panel (WIPS) -->
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
                         <i class="fas fa-file-export"></i> Post Processing
@@ -272,7 +263,6 @@
                     </div>
                 </div>
 
-                <!-- Post Processing Panel (Measure) -->
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
                         <i class="fas fa-file-export"></i> Post Processing
@@ -341,7 +331,6 @@
                     </div>
                 </div>
 
-                <!-- Post Processing Panel (Flatness) -->
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
                         <i class="fas fa-file-export"></i> Post Processing
@@ -471,7 +460,22 @@
     <script>
         const AXES = ["X", "Y", "Z", "A", "B", "C"];
 
-        // --- HELP SYSTEM LOGIC ---
+        // Cycle Mapping Logic per PDF Spec
+        const CYCLE_MAP = {
+            "A10": { d: "Bore Dia", e: "X Shift", h: "Y Shift" },
+            "A11": { d: "Boss Dia", e: "Cloud Depth", h: "X Shift", i: "Y Shift" },
+            "A12": { d: "X Size", e: "Y Size", h: "X Shift", i: "Y Shift" },
+            "A13": { d: "X Size", e: "Y Size", h: "Cloud Depth", i: "X Shift", j: "Y Shift" },
+            "A14": { d: "X Size", e: "X Shift", h: "Cloud Depth" },
+            "A15": { d: "X Size", e: "X Shift" },
+            "A16": { d: "Y Size", e: "Y Shift", h: "Cloud Depth" },
+            "A17": { d: "Y Size", e: "Y Shift" },
+            "A20Z": { h: "Expected Dist" },
+            "A20Y": { e: "Expected Dist" },
+            "A20X": { d: "Expected Dist" }
+        };
+
+        // --- HELP SYSTEM ---
         let helpTimer = null;
         const helpBox = document.getElementById('help-box');
         const helpText = document.getElementById('help-text');
@@ -479,34 +483,27 @@
         document.addEventListener('mouseover', (e) => {
             const target = e.target.closest('[data-help]');
             if (!target) return;
-
             helpTimer = setTimeout(() => {
-                const text = target.getAttribute('data-help');
-                helpText.textContent = text;
+                helpText.textContent = target.getAttribute('data-help');
                 helpBox.style.display = 'block';
                 setTimeout(() => helpBox.classList.add('visible'), 10);
-            }, 1000); // 1 Second Dwell
+            }, 1000);
         });
-
         document.addEventListener('mousemove', (e) => {
             if (helpBox.classList.contains('visible')) {
                 helpBox.style.left = (e.clientX + 15) + 'px';
                 helpBox.style.top = (e.clientY + 15) + 'px';
             }
         });
-
         document.addEventListener('mouseout', (e) => {
-            const target = e.target.closest('[data-help]');
-            if (!target) return;
-            
-            clearTimeout(helpTimer);
-            helpBox.classList.remove('visible');
-            setTimeout(() => {
-                if(!helpBox.classList.contains('visible')) helpBox.style.display = 'none';
-            }, 200);
+            if (e.target.closest('[data-help]')) {
+                clearTimeout(helpTimer);
+                helpBox.classList.remove('visible');
+                setTimeout(() => { if(!helpBox.classList.contains('visible')) helpBox.style.display = 'none'; }, 200);
+            }
         });
 
-        // --- G-CODE GENERATION ENGINE ---
+        // --- ENGINE LOGIC ---
         window.engine = {
             fDec: (v) => { let s = String(v).trim(); return s ? (s.includes(".") ? s : s + ".") : "0."; },
             formatWcs: (num, isExt) => {
@@ -521,15 +518,22 @@
             WIPS_STORM: "G65 P9995",
 
             applyWrapper: (lines, isWrapped, pgmNum, mCode) => {
-                if (!isWrapped) {
-                    lines.push("M01");
-                    return lines;
-                }
+                if (!isWrapped) { lines.push("M01"); return lines; }
                 const wrapped = ["%", `O${pgmNum.replace('O','')}`];
                 wrapped.push(...lines);
-                wrapped.push(mCode);
-                wrapped.push("%");
+                wrapped.push(mCode, "%");
                 return wrapped;
+            },
+
+            getCycleString: (key, vals, wStr) => {
+                const map = CYCLE_MAP[key];
+                let out = `${window.engine.WIPS_STORM} ${key.startsWith("A20") ? "A20." : key + "."}`;
+                if (map.d) out += ` D${window.engine.fDec(vals.d)}`;
+                if (map.e) out += ` E${window.engine.fDec(vals.e)}`;
+                if (map.h) out += ` H${window.engine.fDec(vals.h)}`;
+                if (map.i) out += ` I${window.engine.fDec(vals.i)}`;
+                if (map.j) out += ` J${window.engine.fDec(vals.j)}`;
+                return `${out} ${wStr}`;
             },
 
             generateWips: () => {
@@ -540,38 +544,29 @@
                 const zClr = engine.fDec(document.getElementById('wips-z-clr').value);
                 const zProt = engine.fDec(document.getElementById('wips-z-prot').value);
                 const zPlane = engine.fDec(document.getElementById('wips-z-plane').value);
-                const { g: gWcs } = engine.formatWcs(wcs, isExt);
-                const d = engine.fDec(document.getElementById('wips-d').value);
-                const e = engine.fDec(document.getElementById('wips-e').value);
-                const h = engine.fDec(document.getElementById('wips-h').value);
-
-                const getCycleLine = (k) => {
-                    const { w } = engine.formatWcs(wcs, isExt);
-                    if(k === "A20Z") return `${engine.WIPS_STORM} A20. H${h} ${w}`;
-                    if(k === "A20X") return `${engine.WIPS_STORM} A20. D${d} ${w}`;
-                    if(k === "A20Y") return `${engine.WIPS_STORM} A20. E${e} ${w}`;
-                    if(k === "A10") return `${engine.WIPS_STORM} A10. D${d} ${w}`;
-                    if(k === "A11") return `${engine.WIPS_STORM} A11. D${d} H${h} ${w}`;
-                    if(k === "A12") return `${engine.WIPS_STORM} A12. D${d} E${e} ${w}`;
-                    if(k === "A13") return `${engine.WIPS_STORM} A13. D${d} E${e} H${h} ${w}`;
-                    return `${engine.WIPS_STORM} ${k}. D${d} E${e} H${h} ${w}`;
+                const { g: gWcs, w: wStr } = engine.formatWcs(wcs, isExt);
+                
+                const vals = {
+                    d: document.getElementById('wips-d').value,
+                    e: document.getElementById('wips-e').value,
+                    h: document.getElementById('wips-h').value,
+                    i: document.getElementById('wips-i').value,
+                    j: document.getElementById('wips-j').value
                 };
 
                 let lines = [
                     `(PROBE CYCLE: ${key})`, engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`,
                     `G00 G90 ${gWcs} X${engine.fDec(document.getElementById('wips-x').value)} Y${engine.fDec(document.getElementById('wips-y').value)}`,
                     `G43 H${tNum} Z${zClr}`, `G00 Z${zProt}`, engine.PROBE_ON, `${engine.PROBE_PROTECT} Z${zPlane} F50.`, "",
-                    getCycleLine(key),
+                    engine.getCycleString(key, vals, wStr),
                     "", engine.PROBE_OFF, `G43 H${tNum} Z${zClr}`, engine.G_HOME_Z, engine.G_SAFE_XY
                 ];
 
                 const isWrapped = document.getElementById('wips-post-wrap').checked;
                 const pgmNum = document.getElementById('wips-pgm-num').value || '1234';
                 const mCode = document.querySelector('input[name="wips-m-code"]:checked').value;
-                
                 lines = engine.applyWrapper(lines, isWrapped, pgmNum, mCode);
                 ui.setOutput(lines.join("\n"));
-                if(window.innerWidth < 768) document.getElementById('right-terminal').scrollIntoView({ behavior: 'smooth' });
             },
 
             generateMeasureSequence: () => {
@@ -580,39 +575,41 @@
                 const isExt = document.getElementById('global-ext').checked;
                 const zClr = engine.fDec(document.getElementById('measure-z-clr').value);
                 const zProt = engine.fDec(document.getElementById('measure-z-prot').value);
-                const { g: gWcs } = engine.formatWcs(wcs, isExt);
+                const { g: gWcs, w: wStr } = engine.formatWcs(wcs, isExt);
                 
                 let lines = ["(MULTI-FEATURE SEQUENCE)", "G103 P1 (LIMIT LOOK-AHEAD)", "(RESET MACROS)"];
                 const rows = document.querySelectorAll('.feature-row');
                 rows.forEach(r => { let m = r.querySelector('.feat-macro').value; if(m) lines.push(`#${m.replace('#','')} = 0.`); });
-                
                 lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G00 G90 ${gWcs}`, `G43 H${tNum} Z${zClr}`, engine.PROBE_ON);
                 
                 rows.forEach((r, i) => {
-                    const k = r.querySelector('.feat-cycle').value;
+                    const key = r.querySelector('.feat-cycle').value;
                     const macro = r.querySelector('.feat-macro').value.replace('#','');
-                    const d = r.querySelector('.feat-d').value;
-                    const e = r.querySelector('.feat-e').value;
-                    const h = r.querySelector('.feat-h').value;
                     const plane = engine.fDec(r.querySelector('.feat-plane').value);
                     const tol = r.querySelector('.feat-tol').value.trim();
                     const comment = r.querySelector('.feat-comment').value.toUpperCase() || `FEAT ${i+1}`;
-                    const { w } = engine.formatWcs(wcs, isExt);
+                    
+                    const vals = {
+                        d: r.querySelector('.feat-d').value,
+                        e: r.querySelector('.feat-e').value,
+                        h: r.querySelector('.feat-h').value,
+                        i: r.querySelector('.feat-i').value,
+                        j: r.querySelector('.feat-j').value
+                    };
                     
                     lines.push("", `N${(tNum*100)+i+1} (${comment})`);
                     lines.push(`G00 X${engine.fDec(r.querySelector('.feat-x').value)} Y${engine.fDec(r.querySelector('.feat-y').value)}`);
                     lines.push(`G00 Z${zProt}`);
                     lines.push(`${engine.PROBE_PROTECT} Z${plane} F50.`);
-                    lines.push(`${engine.WIPS_STORM} ${k}. D${engine.fDec(d)} E${engine.fDec(e)} H${engine.fDec(h)} ${w}`);
+                    lines.push(engine.getCycleString(key, vals, wStr));
                     
                     if(macro) {
                         lines.push(`#${macro} = #188 (STORE MEASURED)`);
                         if(tol) {
                             let nominal = "0.";
-                            if (["A10", "A11", "A14", "A15", "A20X"].includes(k)) nominal = engine.fDec(d);
-                            else if (["A16", "A17", "A20Y"].includes(k)) nominal = engine.fDec(e);
-                            else if (k === "A20Z") nominal = engine.fDec(h);
-                            else if (["A12", "A13"].includes(k)) nominal = engine.fDec(d);
+                            if (key === "A20Z") nominal = engine.fDec(vals.h);
+                            else if (key === "A20Y") nominal = engine.fDec(vals.e);
+                            else nominal = engine.fDec(vals.d);
                             lines.push(`(--- ${comment} EVALUATION ---)`);
                             lines.push(`#100 = ABS[ #${macro} - ${nominal} ] (DEVIATION)`);
                             lines.push(`IF [ #100 GT ${engine.fDec(tol)} ] #3000 = 1 (${comment} OUT OF TOL)`);
@@ -621,15 +618,12 @@
                     lines.push(`G00 Z${zClr}`);
                 });
                 
-                lines.push("", engine.PROBE_OFF, "G103 P0 (RESTORE LOOK-AHEAD)", engine.G_HOME_Z, engine.G_SAFE_XY);
-                
+                lines.push("", engine.PROBE_OFF, "G103 P0", engine.G_HOME_Z, engine.G_SAFE_XY);
                 const isWrapped = document.getElementById('measure-post-wrap').checked;
                 const pgmNum = document.getElementById('measure-pgm-num').value || '1234';
                 const mCode = document.querySelector('input[name="measure-m-code"]:checked').value;
-
                 lines = engine.applyWrapper(lines, isWrapped, pgmNum, mCode);
                 ui.setOutput(lines.join("\n"));
-                if(window.innerWidth < 768) document.getElementById('right-terminal').scrollIntoView({ behavior: 'smooth' });
             },
 
             generateFlatness: () => {
@@ -646,14 +640,11 @@
                 lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G90 ${gWcs}`, `G43 H${tNum} Z1.0`, engine.PROBE_ON, "");
                 points.forEach((p, i) => lines.push(`(PT ${i+1})`, `${engine.PROBE_PROTECT} X${engine.fDec(p.querySelector('.flat-pt-x').value)} Y${engine.fDec(p.querySelector('.flat-pt-y').value)} Z0.5`, `${engine.WIPS_STORM} A20. H-1.0 ${wSac}`, `#${p.querySelector('.flat-pt-m').value}=#5063`, ""));
                 lines.push(engine.PROBE_OFF, engine.G_HOME_Z);
-                
                 const isWrapped = document.getElementById('flatness-post-wrap').checked;
                 const pgmNum = document.getElementById('flatness-pgm-num').value || '1234';
                 const mCode = document.querySelector('input[name="flatness-m-code"]:checked').value;
-
                 lines = engine.applyWrapper(lines, isWrapped, pgmNum, mCode);
                 ui.setOutput(lines.join("\n"));
-                if(window.innerWidth < 768) document.getElementById('right-terminal').scrollIntoView({ behavior: 'smooth' });
             }
         };
 
@@ -690,8 +681,7 @@
 
             togglePostOptions: (prefix) => {
                 const isChecked = document.getElementById(prefix + '-post-wrap').checked;
-                const optionsDiv = document.getElementById(prefix + '-post-options');
-                if (optionsDiv) optionsDiv.classList.toggle('hidden', !isChecked);
+                document.getElementById(prefix + '-post-options').classList.toggle('hidden', !isChecked);
             },
 
             setOutput: (txt) => { document.getElementById('output-terminal').textContent = txt; },
@@ -700,13 +690,41 @@
 
             updateWipsMetadata: () => {
                 const key = document.getElementById('wips-cycle').value;
-                const help = document.getElementById('wips-help');
-                const meta = {
-                    "A10": "Bore (Internal)", "A11": "Boss (External)", "A12": "Rect Pocket", 
-                    "A13": "Rect Boss", "A14": "Web X", "A15": "Pocket X", "A16": "Web Y", 
-                    "A17": "Pocket Y", "A20Z": "Surface Z", "A20X": "Surface X", "A20Y": "Surface Y"
+                const map = CYCLE_MAP[key];
+                const update = (labId, contId, name) => {
+                    const lab = document.getElementById(labId);
+                    const cont = document.getElementById(contId);
+                    if (name) {
+                        lab.textContent = name;
+                        cont.classList.remove('arg-inactive');
+                    } else {
+                        lab.textContent = "-";
+                        cont.classList.add('arg-inactive');
+                    }
                 };
-                if(help) help.textContent = `${meta[key] || key} Active. Adjust parameters below.`;
+                update('wips-lab-d', 'wips-arg-d-cont', map.d);
+                update('wips-lab-e', 'wips-arg-e-cont', map.e);
+                update('wips-lab-h', 'wips-arg-h-cont', map.h);
+                update('wips-lab-i', 'wips-arg-i-cont', map.i);
+                update('wips-lab-j', 'wips-arg-j-cont', map.j);
+                document.getElementById('wips-help').textContent = `Cycle ${key} Active.`;
+            },
+
+            updateRowLabels: (row) => {
+                const key = row.querySelector('.feat-cycle').value;
+                const map = CYCLE_MAP[key];
+                const update = (cls, name) => {
+                    const lab = row.querySelector(`.lab-${cls}`);
+                    const cont = row.querySelector(`.arg-${cls}`);
+                    if (name) {
+                        lab.textContent = name;
+                        cont.classList.remove('arg-inactive');
+                    } else {
+                        lab.textContent = "-";
+                        cont.classList.add('arg-inactive');
+                    }
+                };
+                update('d', map.d); update('e', map.e); update('h', map.h); update('i', map.i); update('j', map.j);
             },
 
             updateMacroRef: () => {
@@ -749,11 +767,7 @@
                 let txt = "Variable Not In Range.";
                 if (num >= 2001 && num <= 2200) txt = `Tool ${num-2000} Len Geom`;
                 else if (num >= 2201 && num <= 2400) txt = `Tool ${num-2200} Len Wear`;
-                else if (num >= 5221 && num <= 5339) { let off = Math.floor((num-5221)/20); txt = `G${54+off} Axis: ${AXES[(num-5221)%20]}`; }
-                else if (num >= 7001 && num <= 7400) { let p = Math.floor((num-7001)/20)+1; txt = `G154 P${p} (7k) Axis: ${AXES[(num-7001)%20]}`; }
-                else if (num >= 14001 && num <= 15980) { let p = Math.floor((num-14001)/20)+1; txt = `G154 P${p} (14k) Axis: ${AXES[(num-14001)%20]}`; }
                 else if (num === 188) txt = "Result: Last Measured Dim";
-                else if (num === 5063) txt = "Machine Position Z";
                 res.textContent = txt;
             },
 
@@ -770,56 +784,40 @@
                     </div>
                     <div class="grid grid-cols-2 gap-2 mb-3">
                         <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Cycle Type</label>
-                            <select class="feat-cycle w-full rounded px-2 py-1 text-xs">
+                            <label class="arg-label">Cycle Type</label>
+                            <select class="feat-cycle w-full rounded px-2 py-1 text-xs font-bold" onchange="ui.updateRowLabels(this.closest('.feature-row'))">
                                 <option value="A10">A10 - Bore</option>
                                 <option value="A11">A11 - Boss</option>
                                 <option value="A12">A12 - Rect Pkt</option>
+                                <option value="A13">A13 - Rect Blk</option>
                                 <option value="A15">A15 - Pocket X</option>
+                                <option value="A20Z">A20 - Surface Z</option>
                             </select>
                         </div>
                         <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Comment</label>
-                            <input type="text" placeholder="Comment" class="feat-comment w-full rounded px-2 py-1 text-xs">
+                            <label class="arg-label">Comment</label>
+                            <input type="text" placeholder="Label" class="feat-comment w-full rounded px-2 py-1 text-xs">
                         </div>
                     </div>
                     <div class="grid grid-cols-4 gap-2 mb-3">
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">X Start</label>
-                            <input type="text" class="feat-x w-full rounded px-2 py-1 text-xs" value="0.0">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Y Start</label>
-                            <input type="text" class="feat-y w-full rounded px-2 py-1 text-xs" value="0.0">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Macro #</label>
-                            <input type="text" class="feat-macro w-full rounded px-2 py-1 text-xs" value="${900+id}">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-blue-500 font-bold uppercase ml-1 mb-0.5">Tol</label>
-                            <input type="text" class="feat-tol w-full rounded px-2 py-1 text-xs border-blue-900/50" placeholder="0.002">
-                        </div>
+                        <div class="flex flex-col"><label class="arg-label">X Start</label><input type="text" class="feat-x w-full rounded px-2 py-1 text-xs font-bold" value="0.0"></div>
+                        <div class="flex flex-col"><label class="arg-label">Y Start</label><input type="text" class="feat-y w-full rounded px-2 py-1 text-xs font-bold" value="0.0"></div>
+                        <div class="flex flex-col"><label class="arg-label">Macro #</label><input type="text" class="feat-macro w-full rounded px-2 py-1 text-xs font-bold" value="${900+id}"></div>
+                        <div class="flex flex-col"><label class="arg-label text-blue-500">Tol</label><input type="text" class="feat-tol w-full rounded px-2 py-1 text-xs border-blue-900/50" placeholder="0.002"></div>
                     </div>
-                    <div class="grid grid-cols-4 gap-2">
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">D Arg</label>
-                            <input type="text" class="feat-d w-full rounded px-2 py-1 text-xs" value="1.0">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">E Arg</label>
-                            <input type="text" class="feat-e w-full rounded px-2 py-1 text-xs" value="0">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">H Arg</label>
-                            <input type="text" class="feat-h w-full rounded px-2 py-1 text-xs" value="0">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Plane</label>
-                            <input type="text" class="feat-plane w-full rounded px-2 py-1 text-xs" value="0.1">
-                        </div>
+                    <div class="grid grid-cols-5 gap-1 border-t border-slate-800 pt-2">
+                        <div class="arg-d flex flex-col"><label class="arg-label lab-d">D</label><input type="text" class="feat-d w-full rounded px-1 py-1 text-[10px] font-bold" value="1.0"></div>
+                        <div class="arg-e flex flex-col"><label class="arg-label lab-e">E</label><input type="text" class="feat-e w-full rounded px-1 py-1 text-[10px] font-bold" value="0."></div>
+                        <div class="arg-h flex flex-col"><label class="arg-label lab-h">H</label><input type="text" class="feat-h w-full rounded px-1 py-1 text-[10px] font-bold" value="0."></div>
+                        <div class="arg-i flex flex-col"><label class="arg-label lab-i">I</label><input type="text" class="feat-i w-full rounded px-1 py-1 text-[10px] font-bold" value="0."></div>
+                        <div class="arg-j flex flex-col"><label class="arg-label lab-j">J</label><input type="text" class="feat-j w-full rounded px-1 py-1 text-[10px] font-bold" value="0."></div>
+                    </div>
+                    <div class="flex flex-col mt-2">
+                        <label class="arg-label">Plane</label>
+                        <input type="text" class="feat-plane w-full rounded px-2 py-1 text-xs font-bold" value="0.1">
                     </div>`;
                 container.appendChild(div);
+                ui.updateRowLabels(div);
             },
 
             addFlatnessPoint: () => {
@@ -834,18 +832,9 @@
                         <button onclick="this.parentElement.parentElement.remove()" class="text-slate-700 hover:text-rose-500"><i class="fas fa-trash text-[9px]"></i></button>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">X Pos</label>
-                            <input type="text" class="flat-pt-x w-full rounded px-2 py-1 text-xs" value="0.0">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Y Pos</label>
-                            <input type="text" class="flat-pt-y w-full rounded px-2 py-1 text-xs" value="0.0">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Macro #</label>
-                            <input type="text" class="flat-pt-m w-full rounded px-2 py-1 text-xs text-center" value="${900+id}">
-                        </div>
+                        <input type="text" class="flat-pt-x w-full rounded px-2 py-1 text-xs font-bold" value="0.0">
+                        <input type="text" class="flat-pt-y w-full rounded px-2 py-1 text-xs font-bold" value="0.0">
+                        <input type="text" class="flat-pt-m w-full rounded px-2 py-1 text-xs text-center font-bold" value="${900+id}">
                     </div>`;
                 container.appendChild(div);
             }
@@ -861,8 +850,8 @@
                     wcsSel.appendChild(opt); 
                 }
             }
-            engine.addFeatureRow();
-            engine.addFlatnessPoint(); engine.addFlatnessPoint(); engine.addFlatnessPoint();
+            ui.addFeatureRow();
+            ui.addFlatnessPoint(); ui.addFlatnessPoint(); ui.addFlatnessPoint();
             ui.updateWipsMetadata();
         }
 
