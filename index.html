@@ -104,7 +104,7 @@
         <div class="flex items-center justify-between w-full md:w-auto py-2 md:py-0">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl tracking-tighter text-white brand-logo uppercase">APEX<span class="text-rose-600">PROBE</span></h1>
-                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.3.6</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.3.8</span>
             </div>
             <button class="md:hidden text-slate-500 hover:text-white text-sm"><i class="fas fa-cog"></i></button>
         </div>
@@ -601,9 +601,9 @@
                 let lines = ["(MULTI-FEATURE SEQUENCE)", "G103 P1 (LIMIT LOOK-AHEAD)", "(RESET MACROS)"];
                 const rows = document.querySelectorAll('.feature-row');
                 rows.forEach(r => { let m = r.querySelector('.feat-macro').value; if(m) lines.push(`#${m.replace('#','')} = 0.`); });
-                lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G00 G90 ${gWcs}`, `G43 H${tNum} Z${zClr}`, engine.PROBE_ON);
+                lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G00 G90 ${gWcs}`, `G43 H${tNum} Z${zClr}`, engine.PROBE_ON); // meat&potatoes of the tpath
                 
-                rows.forEach((r, i) => {
+                rows.forEach((r, i) => { // feature for loop
                     const key = r.querySelector('.feat-cycle').value;
                     const macro = r.querySelector('.feat-macro').value.replace('#','');
                     const plane = engine.fDec(r.querySelector('.feat-plane').value);
@@ -626,11 +626,12 @@
                         rowWStr = w;
                     }
                     
-                    lines.push("", `N${(tNum*100)+i+1} (${comment})`);
+                    lines.push("", `N${(tNum*100)+i+1} (${comment})`); // feature loop append list object
                     lines.push(`G00 X${engine.fDec(r.querySelector('.feat-x').value)} Y${engine.fDec(r.querySelector('.feat-y').value)}`);
                     lines.push(`G00 Z${zProt}`);
                     lines.push(`${engine.PROBE_PROTECT} Z${plane} F50.`);
                     lines.push(engine.getCycleString(key, vals, rowWStr));
+                    lines.push(engine.PROBE_OFF);
                     
                     if(macro) {
                         lines.push(`#${macro} = #188 (STORE MEASURED)`);
@@ -884,7 +885,12 @@
                                 <option value="A11">A11 - Boss</option>
                                 <option value="A12">A12 - Rect Pkt</option>
                                 <option value="A13">A13 - Rect Blk</option>
+                                <option value="A14">A14 - Web X</option>
                                 <option value="A15">A15 - Pocket X</option>
+                                <option value="A16">A16 - Web Y</option>
+                                <option value="A17">A17 - Pocket Y</option>
+                                <option value="A20X">A20 - Surface X</option>
+                                <option value="A20Y">A20 - Surface Y</option>
                                 <option value="A20Z">A20 - Surface Z</option>
                             </select>
                         </div>
