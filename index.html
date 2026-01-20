@@ -104,7 +104,7 @@
         <div class="flex items-center justify-between w-full md:w-auto py-2 md:py-0">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl tracking-tighter text-white brand-logo uppercase">APEX<span class="text-rose-600">PROBE</span></h1>
-                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.3.8</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.4.0</span>
             </div>
             <button class="md:hidden text-slate-500 hover:text-white text-sm"><i class="fas fa-cog"></i></button>
         </div>
@@ -138,6 +138,15 @@
                                 <label for="global-ext" class="text-[10px] ml-1 text-slate-400 font-bold uppercase">EXT</label>
                             </div>
                         </div>
+                    </div>
+                    <!-- Global Linking Coordinates (New for v1.4.0) -->
+                    <div>
+                        <label class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Global X Start</label>
+                        <input type="text" id="global-x-start" value="0.0" class="w-full rounded px-3 py-2 text-sm font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Global Y Start</label>
+                        <input type="text" id="global-y-start" value="0.0" class="w-full rounded px-3 py-2 text-sm font-bold">
                     </div>
                 </div>
             </div>
@@ -295,7 +304,6 @@
                 </button>
             </div>
 
-            <!-- TAB 3: FLATNESS -->
             <div id="panel-flatness" class="tab-content hidden space-y-6">
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
@@ -383,7 +391,6 @@
                 <button onclick="engine.generateFlatness()" class="w-full btn-primary text-white font-bold py-4 rounded shadow-lg uppercase tracking-widest text-sm mt-4">Generate Routine</button>
             </div>
 
-            <!-- TAB 4: MACRO REF -->
             <div id="panel-macro" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="panel p-6">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest">Tool Offset Variables</h3>
@@ -481,7 +488,6 @@
     <script>
         const AXES = ["X", "Y", "Z", "A", "B", "C"];
 
-        // Cycle Mapping Logic per PDF Spec
         const CYCLE_MAP = {
             "A10": { d: "Bore Dia", e: "X Shift", h: "Y Shift" },
             "A11": { d: "Boss Dia", e: "Cloud Depth", h: "X Shift", i: "Y Shift" },
@@ -542,7 +548,7 @@
                 if (!isWrapped) { lines.push("M01"); return lines; }
                 const wrapped = ["%", `O${pgmNum.replace('O','')}`];
                 wrapped.push(...lines);
-                wrapped.push(mCode, "%");
+                wrapped.push(mCode || "M30", "%");
                 return wrapped;
             },
 
@@ -596,14 +602,21 @@
                 const isExt = document.getElementById('global-ext').checked;
                 const zClr = engine.fDec(document.getElementById('measure-z-clr').value);
                 const zProt = engine.fDec(document.getElementById('measure-z-prot').value);
+                
+                // v1.4.0: Pull Linking Position from Global Setup
+                const globalX = engine.fDec(document.getElementById('global-x-start').value);
+                const globalY = engine.fDec(document.getElementById('global-y-start').value);
+
                 const { g: gWcs, w: globalWStr } = engine.formatWcs(wcs, isExt);
                 
                 let lines = ["(MULTI-FEATURE SEQUENCE)", "G103 P1 (LIMIT LOOK-AHEAD)", "(RESET MACROS)"];
                 const rows = document.querySelectorAll('.feature-row');
                 rows.forEach(r => { let m = r.querySelector('.feat-macro').value; if(m) lines.push(`#${m.replace('#','')} = 0.`); });
-                lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G00 G90 ${gWcs}`, `G43 H${tNum} Z${zClr}`, engine.PROBE_ON); // meat&potatoes of the tpath
                 
-                rows.forEach((r, i) => { // feature for loop
+                // Header Block: Linking to safe coordinates before feature loop
+                lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G00 G90 ${gWcs} X${globalX} Y${globalY}`, `G43 H${tNum} Z${zClr}`, engine.PROBE_ON); 
+                
+                rows.forEach((r, i) => { 
                     const key = r.querySelector('.feat-cycle').value;
                     const macro = r.querySelector('.feat-macro').value.replace('#','');
                     const plane = engine.fDec(r.querySelector('.feat-plane').value);
@@ -626,7 +639,7 @@
                         rowWStr = w;
                     }
                     
-                    lines.push("", `N${(tNum*100)+i+1} (${comment})`); // feature loop append list object
+                    lines.push("", `N${(tNum*100)+i+1} (${comment})`); 
                     lines.push(`G00 X${engine.fDec(r.querySelector('.feat-x').value)} Y${engine.fDec(r.querySelector('.feat-y').value)}`);
                     lines.push(`G00 Z${zProt}`);
                     lines.push(`${engine.PROBE_PROTECT} Z${plane} F50.`);
@@ -635,6 +648,7 @@
                     
                     if(macro) {
                         lines.push(`#${macro} = #188 (STORE MEASURED)`);
+                        // v1.4.0: Preserved tolerance logic ensures output when 'tol' is defined
                         if(tol && !key.startsWith("A20")) {
                             let nominal = engine.fDec(vals.d); 
                             lines.push(`(--- ${comment} EVALUATION ---)`);
@@ -663,7 +677,7 @@
                 const tolMac = document.getElementById('flat-mac-tol').value;
                 const minMac = document.getElementById('flat-mac-min').value;
                 const maxMac = document.getElementById('flat-mac-max').value;
-                const devMac = document.getElementById('flat-mac-dev').value; // New user-defined Dev variable
+                const devMac = document.getElementById('flat-mac-dev').value;
                 
                 const zClr = engine.fDec(document.getElementById('flat-z-clr').value);
                 const zProt = engine.fDec(document.getElementById('flat-z-prot').value);
@@ -727,7 +741,6 @@
                     }
                     
                     lines.push("", "(--- FINAL RANGE CHECK ---)");
-                    // Uses the user-defined devMac variable instead of hardcoded #100
                     lines.push(`#${devMac} = ABS[ #${maxMac} - #${minMac} ] (TOTAL DEVIATION)`);
                     lines.push(`IF [ #${devMac} GT #${tolMac} ] #3000 = 1 (FLATNESS OUT OF TOL)`);
                 }
@@ -837,14 +850,19 @@
                 tbody.innerHTML = '';
                 AXES.forEach((ax, i) => {
                     let bank7 = "---", bank14 = "---";
-                    if (sel === "G52") { bank7 = `#${5201+i}`; }
-                    else if (sel.startsWith("G5") && sel.length === 3) {
+                    if (sel === "G52") { 
+                        bank7 = `#${5201 + i}`; 
+                    } else if (sel.startsWith("G5") && sel.length === 3) {
                         const g = parseInt(sel.substring(1));
-                        bank7 = `#${5221 + (g-54)*20 + i}`;
+                        bank7 = `#${5221 + (g - 54) * 20 + i}`;
                     } else if (sel.includes("P")) {
                         const p = parseInt(sel.split("P")[1]);
-                        bank7 = `#${7001 + (p-1)*20 + i}`;
-                        bank14 = `#${14001 + (p-1)*20 + i}`;
+                        if (p >= 1 && p <= 20) {
+                            bank7 = `#${7001 + (p - 1) * 20 + i}`;
+                        }
+                        if (p >= 1 && p <= 99) {
+                            bank14 = `#${14001 + (p - 1) * 20 + i}`;
+                        }
                     }
                     tbody.innerHTML += `
                         <tr class="hover:bg-slate-900/40 transition text-xs sm:text-sm">
