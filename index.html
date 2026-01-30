@@ -120,7 +120,7 @@
         <div class="flex items-center justify-between w-full md:w-auto py-2 md:py-0">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl tracking-tighter text-white brand-logo uppercase">APEX<span class="text-rose-600">PROBE</span></h1>
-                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.4.3</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.4.5</span>
             </div>
             <button class="md:hidden text-slate-500 hover:text-white text-sm"><i class="fas fa-cog"></i></button>
         </div>
@@ -712,7 +712,7 @@
                             let nominal = engine.fDec(vals.d); 
                             lines.push(`(--- ${comment} EVALUATION ---)`);
                             lines.push(`#100 = ABS[ #${macro} - ${nominal} ] (DEVIATION)`);
-                            lines.push(`IF [ #100 GT ${engine.fDec(tol)} ] #3000 = 1 (${comment} OUT OF TOL)`);
+                            lines.push(`IF [ #100 GT ${engine.fDec(tol)} ] THEN #3000 = 1 (${comment} OUT OF TOL)`);
                         }
                     }
                     lines.push(`G00 Z${zClr}`);
@@ -767,8 +767,8 @@
 
                 if (ptMacros.length > 0) {
                     lines.push("(--- EVALUATE RESULTS ---)", `#${minMac} = #${ptMacros[0]} (INITIAL MIN)`, `#${maxMac} = #${ptMacros[0]} (INITIAL MAX)`);
-                    for (let k = 1; k < ptMacros.length; k++) { lines.push(`(CHECK PT ${k+1})`, `IF [ #${ptMacros[k]} LT #${minMac} ] #${minMac} = #${ptMacros[k]}`, `IF [ #${ptMacros[k]} GT #${maxMac} ] #${maxMac} = #${ptMacros[k]}`); }
-                    lines.push("", "(--- FINAL RANGE CHECK ---)", `#${devMac} = ABS[ #${maxMac} - #${minMac} ] (TOTAL DEVIATION)`, `IF [ #${devMac} GT #${tolMac} ] #3000 = 1 (FLATNESS OUT OF TOL)`);
+                    for (let k = 1; k < ptMacros.length; k++) { lines.push(`(CHECK PT ${k+1})`, `IF [ #${ptMacros[k]} LT #${minMac} ] THEN #${minMac} = #${ptMacros[k]}`, `IF [ #${ptMacros[k]} GT #${maxMac} ] THEN #${maxMac} = #${ptMacros[k]}`); }
+                    lines.push("", "(--- FINAL RANGE CHECK ---)", `#${devMac} = ABS[ #${maxMac} - #${minMac} ] (TOTAL DEVIATION)`, `IF [ #${devMac} GT #${tolMac} ] THEN #3000 = 1 (FLATNESS OUT OF TOL)`);
                 }
 
                 lines.push(engine.PROBE_OFF, engine.G_HOME_Z, engine.G_SAFE_XY, "M01");
