@@ -89,6 +89,22 @@
         /* Argument Styles for Permitted Panels */
         .arg-label { font-size: 8px; color: #94a3b8; font-weight: bold; text-transform: uppercase; margin-left: 4px; margin-bottom: 2px; }
         .arg-inactive { opacity: 0.25; pointer-events: none; filter: grayscale(1); }
+
+        /* OTS Specific Styles */
+        .tool-btn { 
+            aspect-ratio: 1; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 800; 
+            font-size: 11px;
+            border: 1px solid #1e293b;
+            background: #020617;
+            transition: all 0.1s;
+        }
+        .tool-btn:active { transform: scale(0.9); }
+        .tool-selected { background: var(--haas-red) !important; color: white !important; border-color: white !important; }
+        .ots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 4px; }
     </style>
 </head>
 <body class="flex flex-col">
@@ -104,7 +120,7 @@
         <div class="flex items-center justify-between w-full md:w-auto py-2 md:py-0">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl tracking-tighter text-white brand-logo uppercase">APEX<span class="text-rose-600">PROBE</span></h1>
-                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.4.0</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-bold uppercase">v1.4.3</span>
             </div>
             <button class="md:hidden text-slate-500 hover:text-white text-sm"><i class="fas fa-cog"></i></button>
         </div>
@@ -112,6 +128,7 @@
             <button onclick="ui.switchTab('wips')" id="tab-wips" class="tab-btn px-4 md:px-6 text-xs tab-active">VIRTUAL WIPS</button>
             <button onclick="ui.switchTab('measure')" id="tab-measure" class="tab-btn px-4 md:px-6 text-xs text-slate-400 hover:text-white">MEASURE FEATURES</button>
             <button onclick="ui.switchTab('flatness')" id="tab-flatness" class="tab-btn px-4 md:px-6 text-xs text-slate-400 hover:text-white">FLATNESS</button>
+            <button onclick="ui.switchTab('ots')" id="tab-ots" class="tab-btn px-4 md:px-6 text-xs text-slate-400 hover:text-white">OTS PROBING</button>
             <button onclick="ui.switchTab('macro')" id="tab-macro" class="tab-btn px-4 md:px-6 text-xs text-slate-400 hover:text-white">MACRO REF</button>
         </nav>
         <div class="hidden md:flex gap-4"><button class="text-slate-500 hover:text-white text-sm"><i class="fas fa-cog"></i></button></div>
@@ -139,7 +156,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Global Linking Coordinates (New for v1.4.0) -->
+                    <!-- Global Linking Coordinates -->
                     <div>
                         <label class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Global X Start</label>
                         <input type="text" id="global-x-start" value="0.0" class="w-full rounded px-3 py-2 text-sm font-bold">
@@ -151,6 +168,7 @@
                 </div>
             </div>
 
+            <!-- VIRTUAL WIPS PANEL -->
             <div id="panel-wips" class="tab-content space-y-6">
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
@@ -170,7 +188,7 @@
                         <div class="flex flex-col">
                             <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Plane</label>
                             <input type="text" id="wips-z-plane" value="0.1" class="rounded px-2 py-2 text-xs text-center font-bold"
-                                   data-help="For outside features ie. boss or web, the probing plane is the height at which the probe moves between the points, and the letter argument is the height at which the points are taken. Note: letter arguments define the actual measurement depth.&#10;&#10;For inside features ie. a bore or pocket, the probing plane should be inside the feature.">
+                                   data-help="Approach plane for the probing routine.">
                         </div>
                     </div>
                 </div>
@@ -190,17 +208,6 @@
                         <option value="A20X">A20 - Surface X</option>
                         <option value="A20Y">A20 - Surface Y</option>
                     </select>
-
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">X Start</label>
-                            <input type="text" id="wips-x" value="0.0" class="rounded px-3 py-2 text-sm font-bold">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Y Start</label>
-                            <input type="text" id="wips-y" value="0.0" class="rounded px-3 py-2 text-sm font-bold">
-                        </div>
-                    </div>
 
                     <div class="space-y-3 bg-slate-950/50 p-4 rounded border border-slate-800">
                         <div class="grid grid-cols-2 gap-4">
@@ -247,6 +254,7 @@
                 </button>
             </div>
 
+            <!-- MEASURE FEATURES PANEL -->
             <div id="panel-measure" class="tab-content hidden space-y-4">
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
@@ -255,13 +263,11 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex flex-col">
                             <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Clearance Z</label>
-                            <input type="text" id="measure-z-clr" value="1.0" class="rounded px-3 py-2 text-sm font-bold"
-                                   data-help="Height for positioning between features.">
+                            <input type="text" id="measure-z-clr" value="1.0" class="rounded px-3 py-2 text-sm font-bold">
                         </div>
                         <div class="flex flex-col">
                             <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Protect Z</label>
-                            <input type="text" id="measure-z-prot" value="0.5" class="rounded px-3 py-2 text-sm font-bold"
-                                   data-help="This is the height from which the probe turns on and feeds via protected mode.">
+                            <input type="text" id="measure-z-prot" value="0.5" class="rounded px-3 py-2 text-sm font-bold">
                         </div>
                     </div>
                 </div>
@@ -304,6 +310,7 @@
                 </button>
             </div>
 
+            <!-- FLATNESS PANEL -->
             <div id="panel-flatness" class="tab-content hidden space-y-6">
                 <div class="panel p-4">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
@@ -312,18 +319,15 @@
                     <div class="grid grid-cols-3 gap-2">
                         <div class="flex flex-col">
                             <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Clearance</label>
-                            <input type="text" id="flat-z-clr" value="1.0" class="rounded px-2 py-2 text-xs text-center font-bold"
-                                   data-help="Height for initial entry and final retract.">
+                            <input type="text" id="flat-z-clr" value="1.0" class="rounded px-2 py-2 text-xs text-center font-bold">
                         </div>
                         <div class="flex flex-col">
                             <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Protected</label>
-                            <input type="text" id="flat-z-prot" value="0.5" class="rounded px-2 py-2 text-xs text-center font-bold"
-                                   data-help="Height used for XY rapid moves between probing points.">
+                            <input type="text" id="flat-z-prot" value="0.5" class="rounded px-2 py-2 text-xs text-center font-bold">
                         </div>
                         <div class="flex flex-col">
                             <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Plane</label>
-                            <input type="text" id="flat-z-plane" value="0.1" class="rounded px-2 py-2 text-xs text-center font-bold"
-                                   data-help="Height above part surface the probe will feed to via protected move from protected height.">
+                            <input type="text" id="flat-z-plane" value="0.1" class="rounded px-2 py-2 text-xs text-center font-bold">
                         </div>
                     </div>
                 </div>
@@ -391,6 +395,57 @@
                 <button onclick="engine.generateFlatness()" class="w-full btn-primary text-white font-bold py-4 rounded shadow-lg uppercase tracking-widest text-sm mt-4">Generate Routine</button>
             </div>
 
+            <!-- OTS PROBING PANEL -->
+            <div id="panel-ots" class="tab-content hidden space-y-6">
+                <div class="panel p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-[10px] font-bold text-rose-500 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fas fa-tools"></i> OTS Tool Selection
+                        </h3>
+                        <div class="flex items-center gap-4">
+                            <button onclick="ui.changeOtsPage(-1)" class="text-slate-400 hover:text-white"><i class="fas fa-chevron-left"></i></button>
+                            <span id="ots-range-label" class="text-[10px] font-bold text-slate-500 uppercase">Tools 1 - 99</span>
+                            <button onclick="ui.changeOtsPage(1)" class="text-slate-400 hover:text-white"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div id="ots-tool-grid" class="ots-grid max-h-[300px] overflow-y-auto pr-2">
+                        <!-- JS injected buttons -->
+                    </div>
+                </div>
+
+                <div class="panel p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Selection Queue</h3>
+                        <button onclick="ui.clearOtsQueue()" class="text-[10px] text-slate-500 hover:text-rose-400 font-bold uppercase">Clear All</button>
+                    </div>
+                    <div id="ots-queue-display" class="flex flex-wrap gap-2 text-[10px] font-bold text-slate-400 italic">
+                        No tools selected.
+                    </div>
+                </div>
+
+                <div class="panel p-4">
+                    <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                        <i class="fas fa-file-export"></i> Post Processing
+                    </h3>
+                    <div class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" id="ots-post-wrap" class="accent-rose-600" onchange="ui.togglePostOptions('ots')" checked>
+                        <label for="ots-post-wrap" class="text-[10px] text-slate-400 font-bold uppercase cursor-pointer">% O1234 %</label>
+                    </div>
+                    <div id="ots-post-options" class="space-y-3 pl-6 border-l border-slate-800">
+                        <div class="flex flex-col mb-2">
+                             <label class="text-[8px] text-slate-500 font-bold uppercase ml-1 mb-0.5">Program # (O)</label>
+                             <input type="text" id="ots-pgm-num" value="0001" class="rounded px-2 py-1 text-xs w-24 font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="engine.generateOts()" class="w-full btn-primary text-white font-bold py-4 rounded shadow-lg uppercase tracking-widest text-sm">
+                    Generate OTS Program
+                </button>
+            </div>
+
+            <!-- MACRO REF PANEL -->
             <div id="panel-macro" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="panel p-6">
                     <h3 class="text-[10px] font-bold text-rose-500 uppercase mb-4 tracking-widest">Tool Offset Variables</h3>
@@ -463,7 +518,7 @@
             </div>
         </section>
 
-        <!-- RIGHT COLUMN -->
+        <!-- RIGHT COLUMN TERMINAL -->
         <section id="right-terminal" class="flex-1 flex flex-col bg-black min-h-[300px] md:min-h-0 transition-all duration-300">
             <div class="bg-slate-900 px-4 md:px-6 py-2 border-b border-slate-800 flex justify-between items-center shrink-0">
                 <span class="text-[10px] font-bold text-slate-500 tracking-widest uppercase">NC Terminal</span>
@@ -479,7 +534,7 @@
     </main>
 
     <footer class="bg-slate-900 border-t border-slate-800 px-4 md:px-6 py-2 flex justify-between items-center shrink-0">
-        <div class="flex gap-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest uppercase">
+        <div class="flex gap-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
             <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_#10b981]"></span> HAAS NGC READY</span>
         </div>
         <div class="text-[10px] text-slate-600 font-bold tracking-tight uppercase">APEXPROBE MOBILE</div>
@@ -501,6 +556,10 @@
             "A20Y": { e: "Expected Dist" },
             "A20X": { d: "Expected Dist" }
         };
+
+        // OTS State
+        let otsQueue = [];
+        let otsPage = 0; // 0: 1-99, 1: 100-199, 2: 200-300
 
         // --- HELP SYSTEM ---
         let helpTimer = null;
@@ -573,6 +632,9 @@
                 const zPlane = engine.fDec(document.getElementById('wips-z-plane').value);
                 const { g: gWcs, w: wStr } = engine.formatWcs(wcs, isExt);
                 
+                const globalX = engine.fDec(document.getElementById('global-x-start').value);
+                const globalY = engine.fDec(document.getElementById('global-y-start').value);
+
                 const vals = {
                     d: document.getElementById('wips-d').value,
                     e: document.getElementById('wips-e').value,
@@ -583,7 +645,7 @@
 
                 let lines = [
                     `(PROBE CYCLE: ${key})`, engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`,
-                    `G00 G90 ${gWcs} X${engine.fDec(document.getElementById('wips-x').value)} Y${engine.fDec(document.getElementById('wips-y').value)}`,
+                    `G00 G90 ${gWcs} X${globalX} Y${globalY}`,
                     `G43 H${tNum} Z${zClr}`, `G00 Z${zProt}`, engine.PROBE_ON, `${engine.PROBE_PROTECT} Z${zPlane} F50.`, "",
                     engine.getCycleString(key, vals, wStr),
                     "", engine.PROBE_OFF, `G43 H${tNum} Z${zClr}`, engine.G_HOME_Z, engine.G_SAFE_XY
@@ -603,7 +665,6 @@
                 const zClr = engine.fDec(document.getElementById('measure-z-clr').value);
                 const zProt = engine.fDec(document.getElementById('measure-z-prot').value);
                 
-                // v1.4.0: Pull Linking Position from Global Setup
                 const globalX = engine.fDec(document.getElementById('global-x-start').value);
                 const globalY = engine.fDec(document.getElementById('global-y-start').value);
 
@@ -613,7 +674,6 @@
                 const rows = document.querySelectorAll('.feature-row');
                 rows.forEach(r => { let m = r.querySelector('.feat-macro').value; if(m) lines.push(`#${m.replace('#','')} = 0.`); });
                 
-                // Header Block: Linking to safe coordinates before feature loop
                 lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, `G00 G90 ${gWcs} X${globalX} Y${globalY}`, `G43 H${tNum} Z${zClr}`, engine.PROBE_ON); 
                 
                 rows.forEach((r, i) => { 
@@ -648,7 +708,6 @@
                     
                     if(macro) {
                         lines.push(`#${macro} = #188 (STORE MEASURED)`);
-                        // v1.4.0: Preserved tolerance logic ensures output when 'tol' is defined
                         if(tol && !key.startsWith("A20")) {
                             let nominal = engine.fDec(vals.d); 
                             lines.push(`(--- ${comment} EVALUATION ---)`);
@@ -689,12 +748,7 @@
                 let lines = ["(--- FLATNESS ROUTINE ---)", `(SACRIFICIAL ${wSac})`, "G103 P1", "(INIT VARS)"];
                 const points = document.querySelectorAll('.flat-point');
                 const ptMacros = [];
-                
-                points.forEach(p => {
-                    const m = p.querySelector('.flat-pt-m').value.replace('#','');
-                    ptMacros.push(m);
-                    lines.push(`#${m}=0.`);
-                });
+                points.forEach(p => { const m = p.querySelector('.flat-pt-m').value.replace('#',''); ptMacros.push(m); lines.push(`#${m}=0.`); });
 
                 lines.push(`#${minMac}=0.`, `#${maxMac}=0.`, `#${tolMac}=${engine.fDec(tolVal)}`);
                 lines.push("", engine.G_HOME_Z, engine.G_SAFE_XY, `T${tNum} M06`, "");
@@ -702,47 +756,19 @@
                 if (points.length > 0) {
                     const x1 = engine.fDec(points[0].querySelector('.flat-pt-x').value);
                     const y1 = engine.fDec(points[0].querySelector('.flat-pt-y').value);
-                    lines.push(`(PT 1)`);
-                    lines.push(`G00 G90 ${gWcs} X${x1} Y${y1} (RAPID TO PT1)`);
-                    lines.push(`G43 H${tNum} Z${zClr} (TOOL OFFSET TO CLEARANCE HEIGHT)`);
-                    lines.push(`${engine.PROBE_ON} (TURN ON PROBE)`);
-                    lines.push(`${engine.PROBE_PROTECT} Z${zPlane} F50. (PROTECTED FEED TO PROBING PLANE)`);
-                    lines.push(`${engine.WIPS_STORM} A20. H-1.0 ${wSac}`);
-                    lines.push(`#${ptMacros[0]}=#5063`);
-                    lines.push(`${engine.PROBE_OFF} (PROBE OFF)`);
-                    lines.push(`G00 G90 Z${zProt} (RAPID TO PROTECTED HEIGHT)`);
-                    lines.push("");
+                    lines.push(`(PT 1)`, `G00 G90 ${gWcs} X${x1} Y${y1} (RAPID TO PT1)`, `G43 H${tNum} Z${zClr} (TOOL OFFSET TO CLEARANCE HEIGHT)`, `${engine.PROBE_ON} (TURN ON PROBE)`, `${engine.PROBE_PROTECT} Z${zPlane} F50. (PROTECTED FEED TO PROBING PLANE)`, `${engine.WIPS_STORM} A20. H-1.0 ${wSac}`, `${engine.PROBE_OFF} (PROBE OFF)`, `#${ptMacros[0]}=#5063`, `G00 G90 Z${zProt} (RAPID TO PROTECTED HEIGHT)`, "");
                 }
                 
                 for (let i = 1; i < points.length; i++) {
                     const x = engine.fDec(points[i].querySelector('.flat-pt-x').value);
                     const y = engine.fDec(points[i].querySelector('.flat-pt-y').value);
-                    
-                    lines.push(`(PT ${i+1})`);
-                    lines.push(`G00 G90 ${gWcs} X${x} Y${y} (RAPID TO PT${i+1})`);
-                    lines.push(`${engine.PROBE_ON} (TURN ON PROBE)`);
-                    lines.push(`${engine.PROBE_PROTECT} Z${zPlane} F50. (PROTECTED FEED TO PROBING PLANE)`);
-                    lines.push(`${engine.WIPS_STORM} A20. H-1.0 ${wSac}`);
-                    lines.push(`#${ptMacros[i]}=#5063`);
-                    lines.push(`${engine.PROBE_OFF} (PROBE OFF)`);
-                    lines.push(`G00 G90 Z${zProt} (RAPID TO PROTECTED HEIGHT)`);
-                    lines.push("");
+                    lines.push(`(PT ${i+1})`, `G00 G90 ${gWcs} X${x} Y${y} (RAPID TO PT${i+1})`, `${engine.PROBE_ON} (TURN ON PROBE)`, `${engine.PROBE_PROTECT} Z${zPlane} F50. (PROTECTED FEED TO PROBING PLANE)`, `${engine.WIPS_STORM} A20. H-1.0 ${wSac}`, `${engine.PROBE_OFF} (PROBE OFF)`, `#${ptMacros[i]}=#5063`, `G00 G90 Z${zProt} (RAPID TO PROTECTED HEIGHT)`, "");
                 }
 
                 if (ptMacros.length > 0) {
-                    lines.push("(--- EVALUATE RESULTS ---)");
-                    lines.push(`#${minMac} = #${ptMacros[0]} (INITIAL MIN)`);
-                    lines.push(`#${maxMac} = #${ptMacros[0]} (INITIAL MAX)`);
-                    
-                    for (let k = 1; k < ptMacros.length; k++) {
-                        lines.push(`(CHECK PT ${k+1})`);
-                        lines.push(`IF [ #${ptMacros[k]} LT #${minMac} ] #${minMac} = #${ptMacros[k]}`);
-                        lines.push(`IF [ #${ptMacros[k]} GT #${maxMac} ] #${maxMac} = #${ptMacros[k]}`);
-                    }
-                    
-                    lines.push("", "(--- FINAL RANGE CHECK ---)");
-                    lines.push(`#${devMac} = ABS[ #${maxMac} - #${minMac} ] (TOTAL DEVIATION)`);
-                    lines.push(`IF [ #${devMac} GT #${tolMac} ] #3000 = 1 (FLATNESS OUT OF TOL)`);
+                    lines.push("(--- EVALUATE RESULTS ---)", `#${minMac} = #${ptMacros[0]} (INITIAL MIN)`, `#${maxMac} = #${ptMacros[0]} (INITIAL MAX)`);
+                    for (let k = 1; k < ptMacros.length; k++) { lines.push(`(CHECK PT ${k+1})`, `IF [ #${ptMacros[k]} LT #${minMac} ] #${minMac} = #${ptMacros[k]}`, `IF [ #${ptMacros[k]} GT #${maxMac} ] #${maxMac} = #${ptMacros[k]}`); }
+                    lines.push("", "(--- FINAL RANGE CHECK ---)", `#${devMac} = ABS[ #${maxMac} - #${minMac} ] (TOTAL DEVIATION)`, `IF [ #${devMac} GT #${tolMac} ] #3000 = 1 (FLATNESS OUT OF TOL)`);
                 }
 
                 lines.push(engine.PROBE_OFF, engine.G_HOME_Z, engine.G_SAFE_XY, "M01");
@@ -750,6 +776,26 @@
                 const pgmNum = document.getElementById('flatness-pgm-num').value || '1234';
                 const mCode = document.querySelector('input[name="flatness-m-code"]:checked').value;
                 lines = engine.applyWrapper(lines, isWrapped, pgmNum, mCode);
+                ui.setOutput(lines.join("\n"));
+            },
+
+            generateOts: () => {
+                if (otsQueue.length === 0) {
+                    ui.setOutput("( ERROR: NO TOOLS SELECTED FOR OTS )");
+                    return;
+                }
+
+                let lines = ["/M104 (OTS ARM DOWN)"];
+                otsQueue.forEach(t => {
+                    lines.push(`T${t} M06`);
+                    lines.push(`G65 P9995 A0. B1. C2. T#3026 E0. D0. (PROBE TOOL ${t})`);
+                    lines.push("");
+                });
+                lines.push("M30", "/M105 (OTS ARM UP)");
+
+                const isWrapped = document.getElementById('ots-post-wrap').checked;
+                const pgmNum = document.getElementById('ots-pgm-num').value || '0001';
+                lines = engine.applyWrapper(lines, isWrapped, pgmNum, "M30");
                 ui.setOutput(lines.join("\n"));
                 if(window.innerWidth < 768) document.getElementById('right-terminal').scrollIntoView({ behavior: 'smooth' });
             }
@@ -771,17 +817,14 @@
                 const machinePanel = document.getElementById('machine-setup-panel');
 
                 if (tabId === 'macro') {
-                    terminal.classList.add('hidden');
-                    machinePanel.classList.add('hidden');
-                    sidebar.classList.remove('md:w-[450px]');
-                    sidebar.classList.add('w-full');
-                    ui.updateMacroRef();
-                    ui.updateWorkMacros();
+                    terminal.classList.add('hidden'); machinePanel.classList.add('hidden');
+                    sidebar.classList.remove('md:w-[450px]'); sidebar.classList.add('w-full');
+                    ui.updateMacroRef(); ui.updateWorkMacros();
                 } else {
-                    terminal.classList.remove('hidden');
-                    machinePanel.classList.remove('hidden');
-                    sidebar.classList.add('md:w-[450px]');
+                    terminal.classList.remove('hidden'); machinePanel.classList.remove('hidden');
+                    sidebar.classList.add('md:w-[450px]'); sidebar.classList.remove('w-full');
                     if (tabId === 'wips') ui.updateWipsMetadata();
+                    if (tabId === 'ots') ui.renderOtsTools();
                 }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             },
@@ -802,20 +845,14 @@
                 const update = (labId, contId, name) => {
                     const lab = document.getElementById(labId);
                     const cont = document.getElementById(contId);
-                    if (name) {
-                        lab.textContent = name;
-                        cont.classList.remove('arg-inactive');
-                    } else {
-                        lab.textContent = "-";
-                        cont.classList.add('arg-inactive');
-                    }
+                    if (name) { lab.textContent = name; cont.classList.remove('arg-inactive'); } 
+                    else { lab.textContent = "-"; cont.classList.add('arg-inactive'); }
                 };
                 update('wips-lab-d', 'wips-arg-d-cont', map.d);
                 update('wips-lab-e', 'wips-arg-e-cont', map.e);
                 update('wips-lab-h', 'wips-arg-h-cont', map.h);
                 update('wips-lab-i', 'wips-arg-i-cont', map.i);
                 update('wips-lab-j', 'wips-arg-j-cont', map.j);
-                document.getElementById('wips-help').textContent = `Cycle ${key} Active.`;
             },
 
             updateRowLabels: (row) => {
@@ -824,13 +861,8 @@
                 const update = (cls, name) => {
                     const lab = row.querySelector(`.lab-${cls}`);
                     const cont = row.querySelector(`.arg-${cls}`);
-                    if (name) {
-                        lab.textContent = name;
-                        cont.classList.remove('arg-inactive');
-                    } else {
-                        lab.textContent = "-";
-                        cont.classList.add('arg-inactive');
-                    }
+                    if (name) { lab.textContent = name; cont.classList.remove('arg-inactive'); } 
+                    else { lab.textContent = "-"; cont.classList.add('arg-inactive'); }
                 };
                 update('d', map.d); update('e', map.e); update('h', map.h); update('i', map.i); update('j', map.j);
             },
@@ -850,19 +882,14 @@
                 tbody.innerHTML = '';
                 AXES.forEach((ax, i) => {
                     let bank7 = "---", bank14 = "---";
-                    if (sel === "G52") { 
-                        bank7 = `#${5201 + i}`; 
-                    } else if (sel.startsWith("G5") && sel.length === 3) {
+                    if (sel === "G52") { bank7 = `#${5201 + i}`; } 
+                    else if (sel.startsWith("G5") && sel.length === 3) {
                         const g = parseInt(sel.substring(1));
                         bank7 = `#${5221 + (g - 54) * 20 + i}`;
                     } else if (sel.includes("P")) {
                         const p = parseInt(sel.split("P")[1]);
-                        if (p >= 1 && p <= 20) {
-                            bank7 = `#${7001 + (p - 1) * 20 + i}`;
-                        }
-                        if (p >= 1 && p <= 99) {
-                            bank14 = `#${14001 + (p - 1) * 20 + i}`;
-                        }
+                        if (p >= 1 && p <= 20) bank7 = `#${7001 + (p - 1) * 20 + i}`;
+                        if (p >= 1 && p <= 99) bank14 = `#${14001 + (p - 1) * 20 + i}`;
                     }
                     tbody.innerHTML += `
                         <tr class="hover:bg-slate-900/40 transition text-xs sm:text-sm">
@@ -899,17 +926,9 @@
                         <div class="flex flex-col">
                             <label class="arg-label">Cycle Type</label>
                             <select class="feat-cycle w-full rounded px-2 py-1 text-xs font-bold" onchange="ui.updateRowLabels(this.closest('.feature-row'))">
-                                <option value="A10">A10 - Bore</option>
-                                <option value="A11">A11 - Boss</option>
-                                <option value="A12">A12 - Rect Pkt</option>
-                                <option value="A13">A13 - Rect Blk</option>
-                                <option value="A14">A14 - Web X</option>
-                                <option value="A15">A15 - Pocket X</option>
-                                <option value="A16">A16 - Web Y</option>
-                                <option value="A17">A17 - Pocket Y</option>
-                                <option value="A20X">A20 - Surface X</option>
-                                <option value="A20Y">A20 - Surface Y</option>
-                                <option value="A20Z">A20 - Surface Z</option>
+                                <option value="A10">A10 - Bore</option><option value="A11">A11 - Boss</option><option value="A12">A12 - Rect Pkt</option><option value="A13">A13 - Rect Blk</option>
+                                <option value="A14">A14 - Web X</option><option value="A15">A15 - Pocket X</option><option value="A16">A16 - Web Y</option><option value="A17">A17 - Pocket Y</option>
+                                <option value="A20X">A20 - Surface X</option><option value="A20Y">A20 - Surface Y</option><option value="A20Z">A20 - Surface Z</option>
                             </select>
                         </div>
                         <div class="flex flex-col">
@@ -921,10 +940,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex flex-col">
-                            <label class="arg-label">Comment</label>
-                            <input type="text" placeholder="Label" class="feat-comment w-full rounded px-2 py-1 text-xs">
-                        </div>
+                        <div class="flex flex-col"><label class="arg-label">Comment</label><input type="text" placeholder="Label" class="feat-comment w-full rounded px-2 py-1 text-xs"></div>
                     </div>
                     <div class="grid grid-cols-4 gap-2 mb-3">
                         <div class="flex flex-col"><label class="arg-label">X Start</label><input type="text" class="feat-x w-full rounded px-2 py-1 text-xs font-bold" value="0.0"></div>
@@ -939,10 +955,7 @@
                         <div class="arg-i flex flex-col"><label class="arg-label lab-i">I</label><input type="text" class="feat-i w-full rounded px-1 py-1 text-[10px] font-bold" value="0."></div>
                         <div class="arg-j flex flex-col"><label class="arg-label lab-j">J</label><input type="text" class="feat-j w-full rounded px-1 py-1 text-[10px] font-bold" value="0."></div>
                     </div>
-                    <div class="flex flex-col mt-2">
-                        <label class="arg-label">Plane</label>
-                        <input type="text" class="feat-plane w-full rounded px-2 py-1 text-xs font-bold" value="0.1">
-                    </div>`;
+                    <div class="flex flex-col mt-2"><label class="arg-label">Plane</label><input type="text" class="feat-plane w-full rounded px-2 py-1 text-xs font-bold" value="0.1"></div>`;
                 container.appendChild(div);
                 ui.updateRowLabels(div);
             },
@@ -964,6 +977,60 @@
                         <input type="text" class="flat-pt-m w-full rounded px-2 py-1 text-xs text-center font-bold" value="${900+id}">
                     </div>`;
                 container.appendChild(div);
+            },
+
+            // OTS UI Logic
+            renderOtsTools: () => {
+                const grid = document.getElementById('ots-tool-grid');
+                const label = document.getElementById('ots-range-label');
+                grid.innerHTML = '';
+                
+                let start = 1, end = 99;
+                if (otsPage === 1) { start = 100; end = 199; }
+                if (otsPage === 2) { start = 200; end = 300; }
+                
+                label.textContent = `Tools ${start} - ${end}`;
+                
+                for (let i = start; i <= end; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = `tool-btn rounded text-slate-400 ${otsQueue.includes(i) ? 'tool-selected' : ''}`;
+                    btn.textContent = i;
+                    btn.onclick = () => ui.toggleOtsTool(i);
+                    grid.appendChild(btn);
+                }
+            },
+
+            changeOtsPage: (dir) => {
+                otsPage = Math.max(0, Math.min(2, otsPage + dir));
+                ui.renderOtsTools();
+            },
+
+            toggleOtsTool: (tool) => {
+                const idx = otsQueue.indexOf(tool);
+                if (idx > -1) otsQueue.splice(idx, 1);
+                else otsQueue.push(tool);
+                ui.renderOtsTools();
+                ui.updateOtsQueueDisplay();
+            },
+
+            updateOtsQueueDisplay: () => {
+                const display = document.getElementById('ots-queue-display');
+                if (otsQueue.length === 0) {
+                    display.textContent = 'No tools selected.';
+                    return;
+                }
+                display.innerHTML = otsQueue.map((t, i) => `
+                    <span class="bg-slate-800 px-2 py-1 rounded text-white flex items-center gap-2">
+                        ${t}
+                        <i onclick="ui.toggleOtsTool(${t})" class="fas fa-times text-rose-500 cursor-pointer"></i>
+                    </span>
+                `).join('');
+            },
+
+            clearOtsQueue: () => {
+                otsQueue = [];
+                ui.renderOtsTools();
+                ui.updateOtsQueueDisplay();
             }
         };
 
@@ -972,8 +1039,7 @@
             if(wcsSel) {
                 for(let i=1; i<=99; i++) { 
                     const opt = document.createElement('option'); 
-                    opt.value = `G154 P${i}`; 
-                    opt.textContent = `G154 P${i}`; 
+                    opt.value = `G154 P${i}`; opt.textContent = `G154 P${i}`; 
                     wcsSel.appendChild(opt); 
                 }
             }
